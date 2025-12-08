@@ -2,15 +2,8 @@
 import time
 from ._i2c import I2C
 from .data_type import AccelDate, GyroDate
+import struct
 
-# Sensitivity
-# 2g: 1G = 16384
-# 4g: 1G = 8192
-# 8g: 1G = 4096
-# 16g:  1G = 2048
-
-
-# region: General function
 def bytes_toint(msb, lsb):
     '''
     Convert two bytes to signed integer (big endian)
@@ -35,97 +28,81 @@ def stop_func():
 
 # endregion: General function
 
-class SH3001(I2C):
+class SH3001():
     I2C_ADDRESSES = [0x36, 0x37]
 
     # region: Macro Definitions
-    '''
-    /******************************************************************
-    *	SH3001 Registers Macro Definitions
-    ******************************************************************/
-    '''
-    ACC_XL = 0x00
-    ACC_XH = 0x01
-    ACC_YL = 0x02
-    ACC_YH = 0x03
-    ACC_ZL = 0x04
-    ACC_ZH = 0x05
-    GYRO_XL = 0x06
-    GYRO_XH = 0x07
-    GYRO_YL = 0x08
-    GYRO_YH = 0x09
-    GYRO_ZL = 0x0A
-    GYRO_ZH = 0x0B
-    TEMP_DATAL = 0x0C
-    CHIP_ID = 0x0F
-    INT_STA0 = 0x10
-    INT_STA1 = 0x11
-    INT_STA2 = 0x12
-    INT_STA3 = 0x14
-    INT_STA4 = 0x15
-    FIFO_STA0 = 0x16
-    FIFO_STA1 = 0x17
-    FIFO_DATA = 0x18
-    TEMP_CONF0 = 0x20
-    TEMP_CONF1 = 0x21
+    REG_ACC_X = 0x00
+    ''' Register address for acceleration x-axis data '''
+    REG_ACC_Y = 0x02
+    ''' Register address for acceleration y-axis data '''
+    REG_ACC_Z = 0x04
+    ''' Register address for acceleration z-axis data '''
+    REG_GYRO_X = 0x06
+    ''' Register address for gyroscope x-axis data '''
+    REG_GYRO_Y = 0x08
+    ''' Register address for gyroscope y-axis data '''
+    REG_GYRO_Z = 0x0A
+    ''' Register address for gyroscope z-axis data '''
+    REG_TEMP_DATA = 0x0C
+    ''' Register address for temperature data '''
+    REG_CHIP_ID = 0x0F
+    ''' Register address for chip ID '''
 
-    ACC_CONF0 = 0x22  # accelerometer config 0x22-0x26
-    ACC_CONF1 = 0x23
-    ACC_CONF2 = 0x25
-    ACC_CONF3 = 0x26
+    REG_TEMP_CONF0 = 0x20
+    ''' Register address for temperature config 0 '''
+    REG_TEMP_CONF1 = 0x21
+    ''' Register address for temperature config 1 '''
 
-    GYRO_CONF0 = 0x28  # gyroscope config 0x28-0x2B
-    GYRO_CONF1 = 0x29
-    GYRO_CONF2 = 0x2B
+    REG_ACC_CONF0 = 0x22
+    ''' Register address for accelerometer config 0 '''
+    REG_ACC_CONF1 = 0x23
+    ''' Register address for accelerometer config 1 '''
+    REG_ACC_CONF2 = 0x25
+    ''' Register address for accelerometer config 2 '''
+    REG_ACC_CONF3 = 0x26
+    ''' Register address for accelerometer config 3 '''
 
-    SPI_CONF = 0x32
-    FIFO_CONF0 = 0x35
-    FIFO_CONF1 = 0x36
-    FIFO_CONF2 = 0x37
-    FIFO_CONF3 = 0x38
-    FIFO_CONF4 = 0x39
-    MI2C_CONF0 = 0x3A
-    MI2C_CONF1 = 0x3B
-    MI2C_CMD0 = 0x3C
-    MI2C_CMD1 = 0x3D
-    MI2C_WR = 0x3E
-    MI2C_RD = 0x3F
-    INT_ENABLE0 = 0x40
-    INT_ENABLE1 = 0x41
-    INT_CONF = 0x44
-    INT_LIMIT = 0x45
-    ORIEN_INTCONF0 = 0x46
-    ORIEN_INTCONF1 = 0x47
-    ORIEN_INT_LOW = 0x48
-    ORIEN_INT_HIGH = 0x49
-    ORIEN_INT_SLOPE_LOW = 0x4A
-    ORIEN_INT_SLOPE_HIGH = 0x4B
-    ORIEN_INT_HYST_LOW = 0x4C
-    ORIEN_INT_HYST_HIGH = 0x4D
-    FLAT_INT_CONF = 0x4E
-    ACT_INACT_INT_CONF = 0x4F
-    ACT_INACT_INT_LINK = 0x50
-    TAP_INT_THRESHOLD = 0x51
-    TAP_INT_DURATION = 0x52
-    TAP_INT_LATENCY = 0x53
-    DTAP_INT_WINDOW = 0x54
-    ACT_INT_THRESHOLD = 0x55
-    ACT_INT_TIME = 0x56
-    INACT_INT_THRESHOLDL = 0x57
-    INACT_INT_TIME = 0x58
-    HIGHLOW_G_INT_CONF = 0x59
-    HIGHG_INT_THRESHOLD = 0x5A
-    HIGHG_INT_TIME = 0x5B
-    LOWG_INT_THRESHOLD = 0x5C
-    LOWG_INT_TIME = 0x5D
-    FREEFALL_INT_THRES = 0x5E
-    FREEFALL_INT_TIME = 0x5F
-    INT_PIN_MAP0 = 0x79
-    INT_PIN_MAP1 = 0x7A
-    INACT_INT_THRESHOLDM = 0x7B
-    INACT_INT_THRESHOLDH = 0x7C
-    INACT_INT_1G_REFL = 0x7D
-    INACT_INT_1G_REFH = 0x7E
+    REG_GYRO_CONF0 = 0x28
+    ''' Register address for gyroscope config 0 '''
+    REG_GYRO_CONF1 = 0x29
+    ''' Register address for gyroscope config 1 '''
+    REG_GYRO_CONF2 = 0x2B
+    ''' Register address for gyroscope config 2 '''
+    REG_GYRO_CONF3 = 0x2C
+    ''' Register address for gyroscope config 3 '''
+    REG_GYRO_CONF4 = 0x2D
+    ''' Register address for gyroscope config 4 '''
+    REG_GYRO_CONF5 = 0x2E
+    ''' Register address for gyroscope config 5 '''
+
+    REG_SPI_CONF = 0x32
+    ''' Register address for SPI config '''
+
+    REG_FIFO_CONF0 = 0x35
+    ''' Register address for FIFO config 0 '''
+    REG_FIFO_CONF1 = 0x36
+    ''' Register address for FIFO config 1 '''
+    REG_FIFO_CONF2 = 0x37
+    ''' Register address for FIFO config 2 '''
+    REG_FIFO_CONF3 = 0x38
+    ''' Register address for FIFO config 3 '''
+    REG_FIFO_CONF4 = 0x39
+    ''' Register address for FIFO config 4 '''
+
+    REG_MI2C_CONF0 = 0x3A
+    ''' Register address for Master I2C config 0 '''
+    REG_MI2C_CONF1 = 0x3B
+    ''' Register address for Master I2C config 1 '''
+    REG_MI2C_CMD0 = 0x3C
+    ''' Register address for Master I2C command 0 '''
+    REG_MI2C_CMD1 = 0x3D
+    ''' Register address for Master I2C command 1 '''
+    REG_MI2C_WR = 0x3E
+    ''' Register address for Master I2C write '''
+    REG_MI2C_RD = 0x3F
+    ''' Register address for Master I2C read '''
+
     SPI_REG_ACCESS = 0x7F
     GYRO_CONF3 = 0x8F
     GYRO_CONF4 = 0x9F
@@ -136,248 +113,195 @@ class SH3001(I2C):
     *	ACC Config Macro Definitions
     ******************************************************************/
     '''
-    ODR_1000HZ = 0x00
-    ODR_500HZ = 0x01
-    ODR_250HZ = 0x02
-    ODR_125HZ = 0x03
-    ODR_63HZ = 0x04
-    ODR_31HZ = 0x05
-    ODR_16HZ = 0x06
-    ODR_2000HZ = 0x08
-    ODR_4000HZ = 0x09
-    ODR_8000HZ = 0x0A
-    ODR_16000HZ = 0x0B
-    ODR_32000HZ = 0x0C
+    ACC_ODR_1000HZ = 0b0000
+    ''' Accelerometer ODR 1000 Hz '''
+    ACC_ODR_500HZ = 0b0001
+    ''' Accelerometer ODR 500 Hz '''
+    ACC_ODR_250HZ = 0b0010
+    ''' Accelerometer ODR 250 Hz '''
+    ACC_ODR_125HZ = 0b0011
+    ''' Accelerometer ODR 125 Hz '''
+    ACC_ODR_63HZ = 0b0100
+    ''' Accelerometer ODR 63 Hz '''
+    ACC_ODR_31HZ = 0b0101
+    ''' Accelerometer ODR 31 Hz '''
+    ACC_ODR_16HZ = 0b0110
+    ''' Accelerometer ODR 16 Hz '''
+    ACC_ODR_2000HZ = 0b1000
+    ''' Accelerometer ODR 2000 Hz '''
+    ACC_ODR_4000HZ = 0b1001
+    ''' Accelerometer ODR 4000 Hz '''
+    ACC_ODR_8000HZ = 0b1010
+    ''' Accelerometer ODR 8000 Hz '''
 
     ACC_RANGE_16G = 0x02
+    ''' Accelerometer range 16 g '''
     ACC_RANGE_8G = 0x03
+    ''' Accelerometer range 8 g '''
     ACC_RANGE_4G = 0x04
+    ''' Accelerometer range 4 g '''
     ACC_RANGE_2G = 0x05
+    ''' Accelerometer range 2 g '''
 
     ACC_ODRX040 = 0x00
+    ''' Accelerometer low pass filter cutout frequency ODR x 0.40 '''
     ACC_ODRX025 = 0x20
+    ''' Accelerometer low pass filter cutout frequency ODR x 0.25 '''
     ACC_ODRX011 = 0x40
+    ''' Accelerometer low pass filter cutout frequency ODR x 0.11 '''
     ACC_ODRX004 = 0x60
+    ''' Accelerometer low pass filter cutout frequency ODR x 0.04 '''
 
-    ACC_FILTER_EN = 0x00
-    ACC_FILTER_DIS = 0x80
-    '''
-    /******************************************************************
-    *	GYRO Config Macro Definitions
-    ******************************************************************/
-    '''
+    ACC_ODR_OPTIONS = [
+        ACC_ODR_1000HZ,
+        ACC_ODR_500HZ,
+        ACC_ODR_250HZ,
+        ACC_ODR_125HZ,
+        ACC_ODR_63HZ,
+        ACC_ODR_31HZ,
+        ACC_ODR_16HZ,
+        ACC_ODR_2000HZ,
+        ACC_ODR_4000HZ,
+        ACC_ODR_8000HZ,
+    ]
+    ''' Accelerometer ODR options '''
+
+    ACC_RANGE_OPTIONS = [
+        ACC_RANGE_2G,
+        ACC_RANGE_4G,
+        ACC_RANGE_8G,
+        ACC_RANGE_16G,
+    ]
+    ''' Accelerometer range options '''
+
+    ACC_LOW_PASS_FILTER_OPTIONS = [
+        ACC_ODRX040,
+        ACC_ODRX025,
+        ACC_ODRX011,
+        ACC_ODRX004,
+    ]
+    ''' Accelerometer low pass filter options '''
+
+
+    GYRO_ODR_1000HZ = 0b0000
+    ''' Gyroscope ODR 1000 Hz '''
+    GYRO_ODR_500HZ = 0b0001
+    ''' Gyroscope ODR 500 Hz '''
+    GYRO_ODR_250HZ = 0b0010
+    ''' Gyroscope ODR 250 Hz '''
+    GYRO_ODR_125HZ = 0b0011
+    ''' Gyroscope ODR 125 Hz '''
+    GYRO_ODR_63HZ = 0b0100
+    ''' Gyroscope ODR 63 Hz '''
+    GYRO_ODR_31HZ = 0b0101
+    ''' Gyroscope ODR 31 Hz '''
+    GYRO_ODR_2000HZ = 0b1000
+    ''' Gyroscope ODR 2000 Hz '''
+    GYRO_ODR_4000HZ = 0b1001
+    ''' Gyroscope ODR 4000 Hz '''
+    GYRO_ODR_8000HZ = 0b1010
+    ''' Gyroscope ODR 8000 Hz '''
+    GYRO_ODR_16000HZ = 0b1011
+    ''' Gyroscope ODR 16000 Hz '''
+    GYRO_ODR_32000HZ = 0b1100
+    ''' Gyroscope ODR 32000 Hz '''
+
     GYRO_RANGE_125 = 0x02
+    ''' Gyroscope range 125 dps '''
     GYRO_RANGE_250 = 0x03
+    ''' Gyroscope range 250 dps '''
     GYRO_RANGE_500 = 0x04
+    ''' Gyroscope range 500 dps '''
     GYRO_RANGE_1000 = 0x05
+    ''' Gyroscope range 1000 dps '''
     GYRO_RANGE_2000 = 0x06
+    ''' Gyroscope range 2000 dps '''
 
-    GYRO_ODRX00 = 0x00
-    GYRO_ODRX01 = 0x04
-    GYRO_ODRX02 = 0x08
-    GYRO_ODRX03 = 0x0C
+    GYRO_LPF_00 = 0b00
+    ''' Gyroscope low pass filter cutout frequency see datasheet about Gyroscope digital LPF cut-off frequency configuration '''
+    GYRO_LPF_01 = 0b01
+    ''' Gyroscope low pass filter cutout frequency see datasheet about Gyroscope digital LPF cut-off frequency configuration '''
+    GYRO_LPF_10 = 0b10
+    ''' Gyroscope low pass filter cutout frequency see datasheet about Gyroscope digital LPF cut-off frequency configuration '''
+    GYRO_LPF_11 = 0b11
+    ''' Gyroscope low pass filter cutout frequency see datasheet about Gyroscope digital LPF cut-off frequency configuration '''
 
-    GYRO_FILTER_EN = 0x00
-    GYRO_FILTER_DIS = 0x10
-    '''
-    /******************************************************************
-    *	Temperature Config Macro Definitions
-    ******************************************************************/
-    '''
+    GYRO_ODR_OPTIONS = [
+        GYRO_ODR_1000HZ,
+        GYRO_ODR_500HZ,
+        GYRO_ODR_250HZ,
+        GYRO_ODR_125HZ,
+        GYRO_ODR_63HZ,
+        GYRO_ODR_31HZ,
+        GYRO_ODR_2000HZ,
+        GYRO_ODR_4000HZ,
+        GYRO_ODR_8000HZ,
+        GYRO_ODR_16000HZ,
+        GYRO_ODR_32000HZ,
+    ]
+    ''' Gyroscope ODR options '''
+
+    GYRO_RANGE_OPTIONS = [
+        GYRO_RANGE_125,
+        GYRO_RANGE_250,
+        GYRO_RANGE_500,
+        GYRO_RANGE_1000,
+        GYRO_RANGE_2000,
+    ]
+    ''' Gyroscope range options '''
+
+    GYRO_RANGE_MAP = {
+        GYRO_RANGE_125: 125,
+        GYRO_RANGE_250: 250,
+        GYRO_RANGE_500: 500,
+        GYRO_RANGE_1000: 1000,
+        GYRO_RANGE_2000: 2000,
+    }
+    ''' Gyroscope range map '''
+
+    GYRO_LOW_PASS_FILTER_OPTIONS = [
+        GYRO_LPF_00,
+        GYRO_LPF_01,
+        GYRO_LPF_10,
+        GYRO_LPF_11,
+    ]
+    ''' Gyroscope low pass filter options '''
+
     TEMP_ODR_500 = 0x00
+    ''' Temperature ODR 500 Hz '''
     TEMP_ODR_250 = 0x10
+    ''' Temperature ODR 250 Hz '''
     TEMP_ODR_125 = 0x20
+    ''' Temperature ODR 125 Hz '''
     TEMP_ODR_63 = 0x30
+    ''' Temperature ODR 63 Hz '''
 
-    TEMP_EN = 0x80
-    TEMP_DIS = 0x00
-    '''
-    /******************************************************************
-    *	INT Config Macro Definitions
-    ******************************************************************/
-    '''
-    INT_LOWG = 0x8000
-    INT_HIGHG = 0x4000
-    INT_INACT = 0x2000
-    INT_ACT = 0x1000
-    INT_DOUBLE_TAP = 0x0800
-    INT_TAP = 0x0400
-    INT_FLAT = 0x0200
-    INT_ORIENTATION = 0x0100
-    INT_FIFO_GYRO = 0x0010
-    INT_GYRO_READY = 0x0008
-    INT_ACC_FIFO = 0x0004
-    INT_ACC_READY = 0x0002
-    INT_FREE_FALL = 0x0001
-    INT_UP_DOWN_Z = 0x0040
+    TEMP_ODR_OPTIONS = [
+        TEMP_ODR_500,
+        TEMP_ODR_250,
+        TEMP_ODR_125,
+        TEMP_ODR_63,
+    ]
+    ''' Temperature ODR options '''
 
-    INT_ENABLE = 0x01
-    INT_DISABLE = 0x00
 
-    INT_MAP_INT1 = 0x01
-    INT_MAP_INT = 0x00
-
-    INT_LEVEL_LOW = 0x80
-    INT_LEVEL_HIGH = 0x7F
-    INT_NO_LATCH = 0x40
-    INT_LATCH = 0xBF
-    INT_CLEAR_ANY = 0x10
-    INT_CLEAR_STATUS = 0xEF
-    INT_INT1_NORMAL = 0x04
-    INT_INT1_OD = 0xFB
-    INT_INT_NORMAL = 0x01
-    INT_INT_OD = 0xFE
-    '''
-    /******************************************************************
-    *	Orientation Blocking Config Macro Definitions
-    ******************************************************************/
-    '''
-    ORIENT_BLOCK_MODE0 = 0x00
-    ORIENT_BLOCK_MODE1 = 0x04
-    ORIENT_BLOCK_MODE2 = 0x08
-    ORIENT_BLOCK_MODE3 = 0x0C
-
-    ORIENT_SYMM = 0x00
-    ORIENT_HIGH_ASYMM = 0x01
-    ORIENT_LOW_ASYMM = 0x02
-    '''
-    /******************************************************************
-    *	Flat Time Config Macro Definitions
-    ******************************************************************/
-    '''
-    FLAT_TIME_500MS = 0x40
-    FLAT_TIME_1000MS = 0x80
-    FLAT_TIME_2000MS = 0xC0
-    '''
-    /******************************************************************
-    *	ACT and INACT Int Config Macro Definitions
-    ******************************************************************/
-    '''
-    ACT_AC_MODE = 0x80
-    ACT_DC_MODE = 0x00
-    ACT_X_INT_EN = 0x40
-    ACT_X_INT_DIS = 0x00
-    ACT_Y_INT_EN = 0x20
-    ACT_Y_INT_DIS = 0x00
-    ACT_Z_INT_EN = 0x10
-    ACT_Z_INT_DIS = 0x00
-
-    INACT_AC_MODE = 0x08
-    INACT_DC_MODE = 0x00
-    INACT_X_INT_EN = 0x04
-    INACT_X_INT_DIS = 0x00
-    INACT_Y_INT_EN = 0x02
-    INACT_Y_INT_DIS = 0x00
-    INACT_Z_INT_EN = 0x01
-    INACT_Z_INT_DIS = 0x00
-
-    LINK_PRE_STA = 0x01
-    LINK_PRE_STA_NO = 0x00
-    '''
-    /******************************************************************
-    *	TAP Int Config Macro Definitions
-    ******************************************************************/
-    '''
-    TAP_X_INT_EN = 0x08
-    TAP_X_INT_DIS = 0x00
-    TAP_Y_INT_EN = 0x04
-    TAP_Y_INT_DIS = 0x00
-    TAP_Z_INT_EN = 0x02
-    TAP_Z_INT_DIS = 0x00
-    '''
-    /******************************************************************
-    *	HIGHG Int Config Macro Definitions
-    ******************************************************************/
-    '''
-
-    HIGHG_ALL_INT_EN = 0x80
-    HIGHG_ALL_INT_DIS = 0x00
-    HIGHG_X_INT_EN = 0x40
-    HIGHG_X_INT_DIS = 0x00
-    HIGHG_Y_INT_EN = 0x20
-    HIGHG_Y_INT_DIS = 0x00
-    HIGHG_Z_INT_EN = 0x10
-    HIGHG_Z_INT_DIS = 0x00
-    '''
-    /******************************************************************
-    *	LOWG Int Config Macro Definitions
-    ******************************************************************/
-    '''
-    LOWG_ALL_INT_EN = 0x01
-    LOWG_ALL_INT_DIS = 0x00
-    '''
-    /******************************************************************
-    *	SPI Interface Config Macro Definitions
-    ******************************************************************/
-    '''
-    SPI_3_WIRE = 0x01
-    SPI_4_WIRE = 0x00
-    '''
-    /******************************************************************
-    *	FIFO Config Macro Definitions
-    ******************************************************************/
-    '''
-    FIFO_MODE_DIS = 0x00
-    FIFO_MODE_FIFO = 0x01
-    FIFO_MODE_STREAM = 0x02
-    FIFO_MODE_TRIGGER = 0x03
-
-    FIFO_ACC_DOWNS_EN = 0x80
-    FIFO_ACC_DOWNS_DIS = 0x00
-    FIFO_GYRO_DOWNS_EN = 0x08
-    FIFO_GYRO_DOWNS_DIS = 0x00
-
-    FIFO_FREQ_X1_2 = 0x00
-    FIFO_FREQ_X1_4 = 0x01
-    FIFO_FREQ_X1_8 = 0x02
-    FIFO_FREQ_X1_16 = 0x03
-    FIFO_FREQ_X1_32 = 0x04
-    FIFO_FREQ_X1_64 = 0x05
-    FIFO_FREQ_X1_128 = 0x06
-    FIFO_FREQ_X1_256 = 0x07
-
-    FIFO_EXT_Z_EN = 0x2000
-    FIFO_EXT_Y_EN = 0x1000
-    FIFO_EXT_X_EN = 0x0080
-    FIFO_TEMPERATURE_EN = 0x0040
-    FIFO_GYRO_Z_EN = 0x0020
-    FIFO_GYRO_Y_EN = 0x0010
-    FIFO_GYRO_X_EN = 0x0008
-    FIFO_ACC_Z_EN = 0x0004
-    FIFO_ACC_Y_EN = 0x0002
-    FIFO_ACC_X_EN = 0x0001
-    FIFO_ALL_DIS = 0x0000
-    '''
-    /******************************************************************
-    *	AUX I2C Config Macro Definitions
-    ******************************************************************/
-    '''
-    MI2C_NORMAL_MODE = 0x00
-    MI2C_BYPASS_MODE = 0x01
-
-    MI2C_READ_ODR_200HZ = 0x00
-    MI2C_READ_ODR_100HZ = 0x10
-    MI2C_READ_ODR_50HZ = 0x20
-    MI2C_READ_ODR_25HZ = 0x30
-
-    MI2C_FAIL = 0x20
-    MI2C_SUCCESS = 0x10
-
-    MI2C_READ_MODE_AUTO = 0x40
-    MI2C_READ_MODE_MANUAL = 0x00
     '''
     /******************************************************************
     *	Other Macro Definitions
     ******************************************************************/
     '''
-    TRUE = 0
-    FALSE = 1
 
-    NORMAL_MODE = 0x00
-    SLEEP_MODE = 0x01
-    POWERDOWN_MODE = 0x02
+    # VALUE
+    CHIP_ID = 0x0F
+    ACC_WORKMODE_NORMAL = 0x01
+    ACC_WORKMODE_LOW_POWER = 0x02
 
-    # endregion: Macro Definitions
+    ACC_RANGE_MAP = {
+        ACC_RANGE_2G: 2,
+        ACC_RANGE_4G: 4,
+        ACC_RANGE_8G: 8,
+        ACC_RANGE_16G: 16,
+    }
 
     # init
     def __init__(self, address=None):
@@ -385,10 +309,12 @@ class SH3001(I2C):
             addresses = I2C.scan(search=self.I2C_ADDRESSES)
             if addresses:
                 address = addresses[0]
-        super().__init__(address=address)
-        if not self.is_avaliable():
-            raise IOError("SH3001 is not avaliable")
+
+        self.i2c = I2C(address=address)
+        self.accel_range = 16
+        self.gyro_range = [2000, 2000, 2000]
         self.init()
+
         self.acc_offset = [0, 0, 0]
         self.acc_max = [0, 0, 0]
         self.acc_min = [0, 0, 0]
@@ -396,187 +322,282 @@ class SH3001(I2C):
         self.gyro_offset = [0, 0, 0]
         self.data_vector = [0, 0, 0]
 
-    def new_list(self, value):
-        return [value for i in range(3)]
-
-    def calibrate(self, aram, stopfunc=stop_func, waitfunc=default_wait):
+    def init(self) -> bool:
+        ''' Initialize the sensor
+        
+        Returns:
+            bool: True if initialization is successful, False otherwise
         '''
-        calibration routine, sets cal
-        '''
-        count = 0
-        if aram == 'acc':
-            while True:
-                waitfunc()
-                self.data_vector = self._read()[0]
+        self.chip_id = self.i2c.read_byte_data(self.REG_CHIP_ID)
+        if self.chip_id != self.CHIP_ID:
+            raise ValueError(f'chip id not match, expected 0x{self.CHIP_ID:02X}, got 0x{self.chip_id:02X}')
 
-                self.acc_max = list(map(max, self.acc_max, self.data_vector))
-                self.acc_min = list(map(min, self.acc_min, self.data_vector))
-                self.acc_offset = list(
-                    map(lambda a, b: (a + b) / 2, self.acc_max, self.acc_min))
-                print('\033[K\rmax_list: %s   min_list: %s' %
-                      (self.acc_max, self.acc_min),
-                      end="",
-                      flush=True)
-        elif aram == 'gyro':
-            sum_list = [0, 0, 0]
-            count = 0
-            for i in range(503):
-                if i > 2:
-                    sum_list = [
-                        sum_list[i] + self.sh3001_getimudata('gyro', 'xyz')[i]
-                        for i in range(3)
-                    ]
-            self.gyro_offset = [
-                round(sum_list[i], 2) / 500.0 for i in range(3)
-            ]
-            print("gyro_offset:", self.gyro_offset)
-
-        else:
-            raise ValueError('aram must be acc or gyro')
-
-    def init(self):
-        regData = [0]
-        i = 0
-        while ((regData[0] != 0x61) and (i < 3)):
-            regData = self.mem_read(1, self.CHIP_ID)
-            i += 1
-            if (i == 3) and (regData[0] != 0x61):
-                return False
-
-        self.reset()
-        self.set_acceleration_configuration(self.ODR_500HZ, self.ACC_RANGE_2G,
-                               self.ACC_ODRX025,
-                               self.ACC_FILTER_EN)
-        self.set_gyroscope_configuration(self.ODR_500HZ,
-                                self.GYRO_RANGE_2000,
-                                self.GYRO_RANGE_2000,
-                                self.GYRO_RANGE_2000,
-                                self.GYRO_ODRX00,
-                                self.GYRO_FILTER_EN)
-        self.set_temperature_configuration(self.TEMP_ODR_63, self.TEMP_EN)
+        self.set_acceleration_configuration(
+            low_power = False, 
+            adc_dither = False,
+            filter = True,
+            odr = self.ACC_ODR_500HZ,
+            range = self.ACC_RANGE_16G,
+            low_pass_filter_enable = True,
+            low_pass_filter = self.ACC_ODRX025)
+        self.set_gyroscope_configuration(
+            inactive_detect_enable=False,
+            filter_enable=True,
+            odr=self.GYRO_ODR_500HZ,
+            range_x=self.GYRO_RANGE_2000,
+            range_y=self.GYRO_RANGE_2000,
+            range_z=self.GYRO_RANGE_2000)
+        self.set_temperature_configuration(enable=True, odr=self.TEMP_ODR_63)
+        self.ROOM_TEMP = self.i2c.read_word_data(self.REG_TEMP_CONF0) & 0x0FFF
 
         return True
 
-    def reset(self):
-        # soft reset
-        regData = 0x73
-        self.mem_write(regData, self.address)
-        time.sleep(0.05)
+    def set_acceleration_configuration(self,
+            low_power_enable:Optional[bool]=None,
+            adc_dither_enable:Optional[bool]=None,
+            filter_enable:Optional[bool]=None,
+            odr:Optional[bytes]=None,
+            range:Optional[bytes]=None,
+            low_pass_filter_enable:Optional[bool]=None,
+            low_pass_filter:Optional[bytes]=None) -> None:
+        ''' Set acceleration configuration
 
-        # ADCreset
-        regData = 0x02
-        self.mem_write(regData, self.address)
-        regData = 0xC1
-        self.mem_write(regData, self.address)
-        regData = 0xC2
-        self.mem_write(regData, self.address)
-        regData = 0x00
-        self.mem_write(regData, self.address)
+        Args:
+            low_power_enable (Optional[bool], optional): Low power mode. Defaults to None.
+            adc_dither_enable (Optional[bool], optional): ADC dither mode. Defaults to None.
+            filter_enable (Optional[bool], optional): Digital filter enable. Defaults to None.
+            odr (Optional[bytes], optional): Acceleration ODR. Defaults to None, options are SH3001.ACC_ODR_1000HZ, SH3001.ACC_ODR_500HZ, SH3001.ACC_ODR_250HZ, SH3001.ACC_ODR_125HZ, SH3001.ACC_ODR_63HZ, SH3001.ACC_ODR_31HZ, SH3001.ACC_ODR_16HZ, SH3001.ACC_ODR_2000HZ, SH3001.ACC_ODR_4000HZ, SH3001.ACC_ODR_8000HZ.
+            odr (Optional[bytes], optional): Acceleration ODR. Defaults to None, options are SH3001.ACC_ODR_1000HZ, SH3001.ACC_ODR_500HZ, 
+            range (Optional[bytes], optional): Acceleration range. Defaults to None, options are SH3001.ACC_RANGE_2G, SH3001.ACC_RANGE_4G, SH3001.ACC_RANGE_8G, SH3001.ACC_RANGE_16G.
+            low_pass_filter_enable (Optional[bool], optional): Acceleration low pass filter enable. Defaults to None.
+            low_pass_filter (Optional[bytes], optional): Acceleration low pass filter cut-off frequency configuration. Defaults to None, options are ODRx0.4: SH3001.ACC_ODRX040, ODRx0.25: SH3001.ACC_ODRX025, ODRx0.11: SH3001.ACC_ODRX011, ODRx0.04: SH3001.ACC_ODRX004.
+        '''
+        acc_conf = self.i2c.read_i2c_block_data(self.REG_ACC_CONF0, 4)
+        if low_power_enable is not None:
+            acc_conf[0] |= int(low_power_enable) << 7
+        if adc_dither_enable is not None:
+            acc_conf[0] |= int(adc_dither_enable) << 6
+        if filter_enable is not None:
+            acc_conf[0] |= int(filter_enable) << 0
+        if odr is not None:
+            if odr not in self.ACC_ODR_OPTIONS:
+                raise ValueError(f'odr not in {self.ACC_ODR_OPTIONS}')
+            acc_conf[0] |= odr
+        if range is not None and range in self.ACC_RANGE_OPTIONS:
+            if range not in self.ACC_RANGE_OPTIONS:
+                raise ValueError(f'range not in {self.ACC_RANGE_OPTIONS}')
+            acc_conf[0] |= range
+            self.accel_range = self.ACC_RANGE_MAP[range]
+        
+        if low_pass_filter_enable is not None:
+            acc_conf[1] |= int(low_pass_filter_enable) << 3
+        if low_pass_filter is not None:
+            if low_pass_filter not in self.ACC_LOW_PASS_FILTER_OPTIONS:
+                raise ValueError(f'low_pass_filter not in {self.ACC_LOW_PASS_FILTER_OPTIONS}')
+            acc_conf[1] |= low_pass_filter
+        
+        self.i2c.write_i2c_block_data(self.REG_ACC_CONF0, acc_conf)
 
-        # CVA reset
-        regData = 0x18
-        self.mem_write(regData, self.address)
-        regData = 0x00
-        self.mem_write(regData, self.address)
-        time.sleep(0.01)
+    def set_gyroscope_configuration(self, 
+        inactive_detect_enable:Optional[bool]=None,
+        filter_enable:Optional[bool]=None,
+        odr:Optional[bytes]=None,
+        low_pass_filter_enable:Optional[bool]=None,
+        low_pass_filter:Optional[bytes]=None,
+        range_x:Optional[bytes]=None,
+        range_y:Optional[bytes]=None,
+        range_z:Optional[bytes]=None) -> None:
+        ''' Gyroscope configuration
+        
+        Args:
+            inactive_detect_enable (Optional[bool], optional): Inactive detect enable. Defaults to None.
+            filter_enable (Optional[bool], optional): Digital filter enable. Defaults to None.
+            odr (Optional[bytes], optional): Gyroscope ODR. Defaults to None, options are SH3001.GYRO_ODR_500HZ, SH3001.GYRO_ODR_200HZ, SH3001.GYRO_ODR_100HZ, SH3001.GYRO_ODR_50HZ, SH3001.GYRO_ODR_25HZ.
+            low_pass_filter_enable (Optional[bool], optional): Gyroscope low pass filter enable. Defaults to None.
+            low_pass_filter (Optional[bytes], optional): Gyroscope low pass filter cut-off frequency configuration. Defaults to None, options are SH3001.GYRO_LPF_00, SH3001.GYRO_LPF_01, SH3001.GYRO_LPF_10, SH3001.GYRO_LPF_11.
+            range_x (Optional[bytes], optional): Gyroscope range x. Defaults to None, options are SH3001.GYRO_RANGE_2000, SH3001.GYRO_RANGE_1000, SH3001.GYRO_RANGE_500, SH3001.GYRO_RANGE_250.
+            range_y (Optional[bytes], optional): Gyroscope range y. Defaults to None, options are SH3001.GYRO_RANGE_2000, SH3001.GYRO_RANGE_1000, SH3001.GYRO_RANGE_500, SH3001.GYRO_RANGE_250.
+            range_z (Optional[bytes], optional): Gyroscope range z. Defaults to None, options are SH3001.GYRO_RANGE_2000, SH3001.GYRO_RANGE_1000, SH3001.GYRO_RANGE_500, SH3001.GYRO_RANGE_250.
+        '''
+        gyro_conf = self.i2c.read_i2c_block_data(self.REG_GYRO_CONF0, 6)
+        if inactive_detect_enable is not None:
+            gyro_conf[0] |= int(inactive_detect_enable) << 4
+        if filter_enable is not None:
+            gyro_conf[0] |= int(filter_enable) << 0
+        if odr is not None:
+            if odr not in self.GYRO_ODR_OPTIONS:
+                raise ValueError(f'odr not in {self.GYRO_ODR_OPTIONS}')
+            gyro_conf[1] |= odr
+        if low_pass_filter_enable is not None:
+            gyro_conf[2] |= int(low_pass_filter_enable) << 4
+        if low_pass_filter is not None:
+            if low_pass_filter not in self.GYRO_LOW_PASS_FILTER_OPTIONS:
+                raise ValueError(f'low_pass_filter not in {self.GYRO_LOW_PASS_FILTER_OPTIONS}')
+            gyro_conf[2] |= low_pass_filter << 2
+        if range_x is not None:
+            if range_x not in self.GYRO_RANGE_OPTIONS:
+                raise ValueError(f'range_x not in {self.GYRO_RANGE_OPTIONS}')
+            gyro_conf[3] |= range_x
+            self.gyro_range[0] = self.GYRO_RANGE_MAP[range_x]
+        if range_y is not None:
+            if range_y not in self.GYRO_RANGE_OPTIONS:
+                raise ValueError(f'range_y not in {self.GYRO_RANGE_OPTIONS}')
+            gyro_conf[4] |= range_y
+            self.gyro_range[1] = self.GYRO_RANGE_MAP[range_y]
+        if range_z is not None:
+            if range_z not in self.GYRO_RANGE_OPTIONS:
+                raise ValueError(f'range_z not in {self.GYRO_RANGE_OPTIONS}')
+            gyro_conf[5] |= range_z
+            self.gyro_range[2] = self.GYRO_RANGE_MAP[range_z]
+        
+        self.i2c.write_i2c_block_data(self.REG_GYRO_CONF0, gyro_conf)
 
-    def set_acceleration_configuration(self, accODR, accRange, accCutOffFreq,
-                          accFilterEnble):
-        # enable acc digital filter
-        regData = self.mem_read(1, self.ACC_CONF0)
-        regData[0] |= 0x01
-        self.mem_write(regData, self.ACC_CONF0)
+    def set_temperature_configuration(self, enable:Optional[bool]=None, odr:Optional[bytes]=None) -> None:
+        ''' Temperature configuration
+        
+        Args:
+            enable (Optional[bool], optional): Temperature enable. Defaults to None.
+            odr (Optional[bytes], optional): Temperature ODR. Defaults to None, options are SH3001.TEMP_ODR_50HZ, SH3001.TEMP_ODR_25HZ, SH3001.TEMP_ODR_10HZ, SH3001.TEMP_ODR_5HZ, SH3001.TEMP_ODR_2HZ.
+        '''
+        conf = self.i2c.read_byte_data(self.REG_TEMP_CONF0)
+        if enable is not None:
+            conf &= 0b01111111
+            conf |= int(enable) << 7
+        if odr is not None:
+            if odr not in self.TEMP_ODR_OPTIONS:
+                raise ValueError(f'odr not in {self.TEMP_ODR_OPTIONS}')
+            conf &= 0b11001111
+            conf |= odr << 4
 
-        # set acc ODR
-        self.mem_write(accODR, self.ACC_CONF1)
+        self.i2c.write_byte_data(self.REG_TEMP_CONF0, conf)
 
-        # set acc Range
-        self.mem_write(accRange, self.ACC_CONF2)
-        regData = self.mem_read(1, self.ACC_CONF2)
-        # print(regData)
+    def read_temperature(self, data:Optional[list]=None) -> float:
+        ''' Read temperature
+        
+        Returns:
+            float: Temperature in Celsius
+        '''
+        if data is None:
+            data = self.i2c.read_word_data(self.REG_TEMP_DATA)
+        # Both temperature readings and room temperature are 12-bit unsigned values
+        data = data & 0x0FFF
+        temperature = (data - self.ROOM_TEMP) / 16.0 + 25.0
+        return temperature
 
-        # bypass acc low pass filter or not
-        regData = self.mem_read(1, self.ACC_CONF3)
-        regData[0] &= 0x17
-        regData[0] |= (accCutOffFreq | accFilterEnble)
-        self.mem_write(regData, self.ACC_CONF3)
+    def read_accel(self, data:Optional[list]=None, raw:Optional[bool]=False) -> AccelDate:
+        ''' Read acceleration
+        
+        Args:
+            data (Optional[list], optional): Acceleration data. Defaults to None. provide data to skip reading
+            raw (Optional[bool], optional): Raw data. Defaults to False.
 
-    def set_gyroscope_configuration(self, gyroODR, gyroRangeX, gyroRangeY, gyroRangeZ,
-                           gyroCutOffFreq, gyroFilterEnble):
-        regData = self.mem_read(1, self.GYRO_CONF0)
-        regData[0] |= 0x01
-        self.mem_write(regData, self.GYRO_CONF0)
+        Returns:
+            AccelDate: Acceleration data
+        '''
+        if data is None:
+            data = self.i2c.read_i2c_block_data(self.REG_ACC_X, 6)
 
-        # set gyro ODR
-        self.mem_write(gyroODR, self.GYRO_CONF1)
+        data = bytes(data)
+        values = struct.unpack_from('hhh', data, 0)
+        if not raw:
+            # Convert acceleration data to g
+            values = [v / (2 * self.accel_range) + self.accel_range for v in values]
+            # apply offset
+            values = [v - self.acc_offset[i] for i, v in enumerate(values)]
 
-        # set acc Range
-        self.mem_write(gyroRangeX, self.GYRO_CONF3)
-        self.mem_write(gyroRangeY, self.GYRO_CONF4)
-        self.mem_write(gyroRangeZ, self.GYRO_CONF5)
+        return AccelDate(*values)
 
-        # bypass acc low pass filter or not
-        regData = self.mem_read(1, self.GYRO_CONF2)
-        regData[0] &= 0xE3
-        regData[0] |= (gyroCutOffFreq | gyroFilterEnble)
-        self.mem_write(regData, self.GYRO_CONF2)
+    def read_gyro(self, data:Optional[list]=None, raw:Optional[bool]=False) -> GyroDate:
+        ''' Read gyroscope
+        
+        Args:
+            data (Optional[list], optional): Gyroscope data. Defaults to None. provide data to skip reading
+            raw (Optional[bool], optional): Raw data. Defaults to False.
 
-    def set_temperature_configuration(self, tempODR, tempEnable):
-        regData = self.mem_read(1, self.TEMP_CONF0)
-        regData[0] &= 0x4F
-        regData[0] |= (tempODR | tempEnable)
-        self.mem_write(regData, self.TEMP_CONF0)
-        regData = self.mem_read(1, self.TEMP_CONF0)
+        Returns:
+            GyroDate: Gyroscope data
+        '''
+        if data is None:
+            data = self.i2c.read_i2c_block_data(self.REG_GYRO_X, 6)
 
-    # return accData,gyroData
-    def _read(self):
-        try:
-            regData = self.mem_read(12, self.ACC_XL)
+        data = bytes(data)
+        values = struct.unpack_from('hhh', data, 0)
+        if not raw:
+            # Convert gyroscope data to dps
+            values = [v / (2 * self.gyro_range[i]) + self.gyro_range[i] for i, v in enumerate(values)]
+            # apply offset
+            values = [v - self.gyro_offset[i] for i, v in enumerate(values)]
 
-            accel_x = bytes_toint(regData[1], regData[0])
-            accel_y = bytes_toint(regData[3], regData[2])
-            accel_z = bytes_toint(regData[5], regData[4])
+        return GyroDate(*values)
 
-            gyro_x = bytes_toint(regData[7], regData[6])
-            gyro_y = bytes_toint(regData[9], regData[8])
-            gyro_z = bytes_toint(regData[11], regData[10])
+    def read(self) -> tuple:
+        ''' Read all data
+        
+        Returns:
+            tuple: Acceleration data, Gyroscope data, Temperature
+        '''
+        data = self.i2c.read_i2c_block_data(self.REG_ACC_X, 14)
+        accel_x, accel_y, accel_z = struct.unpack_from('hhh', data, 0)
+        gyro_x, gyro_y, gyro_z = struct.unpack_from('hhh', data, 6)
+        temperature = self.read_temperature(data[12:])
+        return AccelDate(accel_x, accel_y, accel_z), GyroDate(gyro_x, gyro_y, gyro_z), temperature
 
-            return AccelDate(accel_x, accel_y, accel_z), GyroDate(gyro_x, gyro_y, gyro_z)
-        except Exception as e:
-            return False
+    def set_accel_offset(self, offset_list:list) -> None:
+        ''' Set acceleration offset
+        
+        Args:
+            offset_list (list): Acceleration offset.
+        '''
+        self.acc_offset = offset_list
 
-    def read_temperature(self):
-        tempref = [0, 0]
-        regData = self.mem_read(2, self.TEMP_CONF0)
-        tempref[0] = regData[0] & 0x0F << 8 | regData[1]
+    def set_gyro_offset(self, offset_list:list) -> None:
+        ''' Set gyroscope offset
+        
+        Args:
+            offset_list (list): Gyroscope offset.
+        '''
+        self.gyro_offset = offset_list
 
-        regData = self.mem_read(2, self.TEMP_DATAL)
-        tempref[1] = regData[1] & 0x0F << 8 | regData[0]
+    def calibrate_gyro(self, times: int = 100) -> list:
+        ''' Calibrate gyroscope
+        
+        Args:
+            times (int, optional): Calibration times. Defaults to 100.
+        '''
+        datas = []
+        for _ in range(times):
+            gyro_data = self.read_gyro(raw=True)
+            datas.append(gyro_data.list())
+            time.sleep(0.01)
+        self.gyro_offset = [sum([v[i] for v in datas]) / len(datas) for i in range(3)]
+        return self.gyro_offset
 
-        return (tempref[1] - tempref[0]) / 16.0 + 25.0
+    def calibrate_accel_prepare(self) -> None:
+        ''' Prepare accelerometer calibration, clear temp datas
+        '''
+        self.accel_cali_temp = []
 
-    def read(self):
-        accData, gyroData = self._read()
-        temperature = self.read_temperature()
-        accData_List = [data - self.acc_offset[i] for i, data in enumerate(accData.list())]
-        gyroData_List = [data - self.gyro_offset[i] for i, data in enumerate(gyroData.list())]
-        accData = AccelDate(*accData_List)
-        gyroData = GyroDate(*gyroData_List)
+    def calibrate_accel_step(self) -> None:
+        ''' Calibration accelerometer step, read and store raw data
+        '''
+        if self.accel_cali_temp is None:
+            self.calibrate_accel_prepare()
+        accel_data = self.read_accel(raw=True)
+        self.accel_cali_temp.append(accel_data.list())
 
-        return accData, gyroData, temperature
+    def calibratetion_finish(self) -> list:
+        ''' Calibration finish, calculate offset
 
-    def set_offset(self, offset_list=None):
-        if offset_list == None:
-            offset_list = self.acc_offset
-
-    def acc_calibrate_cmd(self):
-        try:
-            print(
-                'Calibration start!\nRotate the device for 720 degree in all 3 axis\nPress [Ctrl] + [C] if finish'
-            )
-            while True:
-                self.calibrate('acc')
-        except KeyboardInterrupt:
-            print("")
-            self.set_offset(self.acc_offset)
-            print('offset: ', self.acc_offset)
+        Returns:
+            list: Acceleration offset
+        '''
+        if self.accel_cali_temp is None:
+            raise ValueError('Calibration data is empty')
+        
+        # Calculate accelrometer offset
+        # Get max and min values
+        accel_max = list(map(max, *self.accel_cali_temp))
+        accel_min = list(map(min, *self.accel_cali_temp))
+        # Calculate offset
+        self.acc_offset = [(accel_max[i] + accel_min[i]) / 2 for i in range(3)]
+        return self.acc_offset
