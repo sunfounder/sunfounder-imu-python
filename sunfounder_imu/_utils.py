@@ -1,7 +1,20 @@
 #!/usr/bin/env python3
-import os
-import time
 from typing import Callable, Any
+
+def mapping(x: float, in_min: float, in_max: float, out_min: float, out_max: float) -> float:   
+    """ Map value from one range to another range
+
+    Args:
+        x (float): value to map
+        in_min (float): input minimum
+        in_max (float): input maximum
+        out_min (float): output minimum
+        out_max (float): output maximum
+
+    Returns:
+        float: mapped value
+    """
+    return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min
 
 def retry(times: int = 5):
     """ Retry decorator retry specified times if any error occurs
