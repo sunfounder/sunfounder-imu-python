@@ -3,30 +3,7 @@ import time
 from ._i2c import I2C
 from .data_type import AccelDate, GyroDate
 import struct
-
-def bytes_toint(msb, lsb):
-    '''
-    Convert two bytes to signed integer (big endian)
-    for little endian reverse msb, lsb arguments
-    Can be used in an interrupt handler
-    '''
-    if not msb & 0x80:
-        return msb << 8 | lsb  # +ve
-    return -(((msb ^ 255) << 8) | (lsb ^ 255) + 1)
-
-
-def default_wait():
-    '''
-    delay of 10 ms
-    '''
-    time.sleep(0.01)
-
-
-def stop_func():
-    return False
-
-
-# endregion: General function
+from typing import Optional
 
 class SH3001():
     I2C_ADDRESSES = [0x36, 0x37]
@@ -103,11 +80,6 @@ class SH3001():
     REG_MI2C_RD = 0x3F
     ''' Register address for Master I2C read '''
 
-    SPI_REG_ACCESS = 0x7F
-    GYRO_CONF3 = 0x8F
-    GYRO_CONF4 = 0x9F
-    GYRO_CONF5 = 0xAF
-    AUX_I2C_CONF = 0xFD
     '''
     /******************************************************************
     *	ACC Config Macro Definitions
@@ -284,15 +256,8 @@ class SH3001():
     ]
     ''' Temperature ODR options '''
 
-
-    '''
-    /******************************************************************
-    *	Other Macro Definitions
-    ******************************************************************/
-    '''
-
     # VALUE
-    CHIP_ID = 0x0F
+    CHIP_ID = 0x61
     ACC_WORKMODE_NORMAL = 0x01
     ACC_WORKMODE_LOW_POWER = 0x02
 
@@ -332,10 +297,12 @@ class SH3001():
         if self.chip_id != self.CHIP_ID:
             raise ValueError(f'chip id not match, expected 0x{self.CHIP_ID:02X}, got 0x{self.chip_id:02X}')
 
+        self.reset()
+
         self.set_acceleration_configuration(
-            low_power = False, 
-            adc_dither = False,
-            filter = True,
+            low_power_enable = False, 
+            adc_dither_enable = False,
+            filter_enable = True,
             odr = self.ACC_ODR_500HZ,
             range = self.ACC_RANGE_16G,
             low_pass_filter_enable = True,
@@ -349,6 +316,7 @@ class SH3001():
             range_z=self.GYRO_RANGE_2000)
         self.set_temperature_configuration(enable=True, odr=self.TEMP_ODR_63)
         self.ROOM_TEMP = self.i2c.read_word_data(self.REG_TEMP_CONF0) & 0x0FFF
+        print(f"room temp: {self.ROOM_TEMP}")
 
         return True
 
@@ -469,7 +437,21 @@ class SH3001():
             conf &= 0b11001111
             conf |= odr << 4
 
+        print(f"temperature conf: {conf}")
         self.i2c.write_byte_data(self.REG_TEMP_CONF0, conf)
+
+    def reset(self) -> None:
+        ''' Reset device '''
+        self.i2c.write_byte_data(0x36, 0x73)
+        time.sleep(0.05)
+        self.i2c.write_byte_data(0x36, 0x02)
+        self.i2c.write_byte_data(0x36, 0xC1)
+        self.i2c.write_byte_data(0x36, 0xC2)
+        self.i2c.write_byte_data(0x36, 0x00)
+
+        self.i2c.write_byte_data(0x36, 0x18)
+        self.i2c.write_byte_data(0x36, 0x00)
+        time.sleep(0.01)
 
     def read_temperature(self, data:Optional[list]=None) -> float:
         ''' Read temperature
@@ -478,7 +460,11 @@ class SH3001():
             float: Temperature in Celsius
         '''
         if data is None:
-            data = self.i2c.read_word_data(self.REG_TEMP_DATA)
+            data = self.i2c.read_i2c_block_data(self.REG_TEMP_DATA, 2)
+        print(f"data: {data}")
+        data = bytes(data)
+        data = struct.unpack_from('!h', data, 0)[0]
+        print(f"raw temp: {data}")
         # Both temperature readings and room temperature are 12-bit unsigned values
         data = data & 0x0FFF
         temperature = (data - self.ROOM_TEMP) / 16.0 + 25.0
@@ -537,10 +523,10 @@ class SH3001():
             tuple: Acceleration data, Gyroscope data, Temperature
         '''
         data = self.i2c.read_i2c_block_data(self.REG_ACC_X, 14)
-        accel_x, accel_y, accel_z = struct.unpack_from('hhh', data, 0)
-        gyro_x, gyro_y, gyro_z = struct.unpack_from('hhh', data, 6)
+        accel_data = self.read_accel(data[:6])
+        gyro_data = self.read_gyro(data[6:12])
         temperature = self.read_temperature(data[12:])
-        return AccelDate(accel_x, accel_y, accel_z), GyroDate(gyro_x, gyro_y, gyro_z), temperature
+        return accel_data, gyro_data, temperature
 
     def set_accel_offset(self, offset_list:list) -> None:
         ''' Set acceleration offset
