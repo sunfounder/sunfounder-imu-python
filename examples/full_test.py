@@ -9,7 +9,6 @@ Gracefully exits when Ctrl+C is pressed.
 """
 
 from time import sleep
-import math
 
 # Import Sunfounder sensor modules
 from sunfounder_imu import IMU
@@ -19,9 +18,25 @@ def main():
 
     try:
         while True:
-            imu.read()
+            data = imu.read()
             
-            print(f"Altitude={imu.altitude:7.2f} m")
+            print(f"Altitude={data['altitude']:7.2f} m")
+            print(f"Azimuth={data['azimuth']:7.2f} °")
+            print(f"Acceleration:")
+            print(f"  X={data['acceleration'].x:7.2f} m/s²")
+            print(f"  Y={data['acceleration'].y:7.2f} m/s²")
+            print(f"  Z={data['acceleration'].z:7.2f} m/s²")
+            print(f"Gyroscrope:")
+            print(f"  X={data['gyroscrope'].x:7.2f} °/s")
+            print(f"  Y={data['gyroscrope'].y:7.2f} °/s")
+            print(f"  Z={data['gyroscrope'].z:7.2f} °/s")
+            print(f"Magenatic:")
+            print(f"  X={data['magenatic'].x:7.2f} μT")
+            print(f"  Y={data['magenatic'].y:7.2f} μT")
+            print(f"  Z={data['magenatic'].z:7.2f} μT")
+            print(f"Temperature={data['temperature']:7.2f} °C")
+            print(f"Pressure={data['pressure']:7.2f} hPa")
+
             sleep(0.5)
 
     except KeyboardInterrupt:

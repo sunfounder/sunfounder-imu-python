@@ -18,6 +18,9 @@ class ThreeAxisData:
     def list(self):
         return [self.x, self.y, self.z]
 
+    def tolist(self):
+        return [self.x, self.y, self.z]
+
     def __str__(self):
         return f"{self.__class__.__name__}(x={self.x}, y={self.y}, z={self.z})"
 

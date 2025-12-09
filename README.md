@@ -39,7 +39,7 @@ sphinx-apidoc -f -d 1 -e -M -P -T -o source/api ../sunfounder_imu
 - `-P` include "_private" modules.
 - `-T` don't create a table of contents file.
 - `-o source/api` Specify the output directory for the generated rst files.
-- `../sunfounder_voice_assistant` Specify the path to the sunfounder_voice_assistant package.
+- `../sunfounder_imu` Specify the path to the sunfounder_imu package.
 
 
 ## Debug record
@@ -50,6 +50,7 @@ sudo pip uninstall --break sunfounder-imu -y && sudo pip install --break ~/sunfo
 sudo pip install ~/sunfounder-imu-python/ --break-system-packages --no-deps --no-build-isolation
 sudo python3 ~/sunfounder-imu-python/examples/spl06_001_example.py
 sudo python3 ~/sunfounder-imu-python/examples/sh3001_example.py
+sudo python3 ~/sunfounder-imu-python/examples/full_test.py
 ```
 
 ## About SunFounder

@@ -96,6 +96,8 @@ class SPL06_001(_Base):
                 address = addresses[0]
         self.i2c = I2C(address=address)
         self.address = address
+        self.sea_level_pressure = self.config.get("spl06_001_sea_level_pressure", self.P0)
+        self.offset = self.config.get("spl06_001_offset", 0)
 
         self._init(mode, pressure_rate, pressure_precision, temperature_rate, temperature_precision)
 
@@ -327,25 +329,25 @@ class SPL06_001(_Base):
         # Apply pressure compensation formula from datasheet
         pressure = c00 + p_raw_sc * (c10 + p_raw_sc * (c20 + p_raw_sc * c30))
         pressure += t_raw_sc * c01 + t_raw_sc * p_raw_sc * (c11 + p_raw_sc * c21)
+        pressure += self.offset
         
         return pressure / 100.0
     
-    def get_altitude(self, p0=None, pressure=None) -> float:
+    def get_altitude(self, pressure=None) -> float:
         """ Calculate altitude based on pressure
         
         Args:
-            p0 (float): Sea level pressure in Pascals (default: stored value)
+            pressure (float): Pressure in Pascals (default: current pressure)
 
         Returns:
             float: Altitude in meters
         """
         # Use provided sea level pressure P0 or the stored one
-        p0 = p0 if p0 is not None else self.P0
-        
-        pressure = pressure if pressure is not None else self.get_pressure()
+        if pressure is None:
+            pressure = self.get_pressure()
         
         # Barometric formula for altitude calculation
-        altitude = 44330.0 * (1.0 - ((pressure / p0) ** 0.1903))
+        altitude = 44330.0 * (1.0 - ((pressure / self.sea_level_pressure) ** 0.1903))
         
         return altitude
     
@@ -360,3 +362,21 @@ class SPL06_001(_Base):
         altitude = self.get_altitude(pressure=pressure)
         
         return (temperature, pressure, altitude)
+
+    def set_sea_level_pressure(self, pressure: float) -> None:
+        """ Set the sea level pressure for altitude calculations
+        
+        Args:
+            pressure (float): Sea level pressure in Pascals
+        """
+        self.sea_level_pressure = pressure
+        self.config.set("sea_level_pressure", pressure)
+
+    def set_offset(self, offset: float) -> None:
+        """ Set the offset for pressure calculations
+        
+        Args:
+            offset (float): Offset value in Pascals
+        """
+        self.offset = offset
+        self.config.set("offset", offset)

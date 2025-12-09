@@ -2,12 +2,13 @@
 import time
 import struct
 from typing import Optional
+from .data_type import AccelDate, GyroDate
 
 from ._i2c import I2C
 from ._utils import mapping
-from .data_type import AccelDate, GyroDate
+from ._base import _Base
 
-class SH3001():
+class SH3001(_Base):
     I2C_ADDRESSES = [0x36, 0x37]
 
     # region: Macro Definitions
@@ -273,7 +274,8 @@ class SH3001():
     G = 9.80665
 
     # init
-    def __init__(self, address=None):
+    def __init__(self, *args, address=None, **kwargs):
+        super().__init__(*args, **kwargs)
         if address is None:
             addresses = I2C.scan(search=self.I2C_ADDRESSES)
             if addresses:
@@ -283,8 +285,8 @@ class SH3001():
         self.accel_range = 16
         self.gyro_range = [2000, 2000, 2000]
 
-        self.acc_offset = [0, 0, 0]
-        self.gyro_offset = [0, 0, 0]
+        self.acc_offset = self.config.get("sh3001_acc_offset", [0, 0, 0])
+        self.gyro_offset = self.config.get("sh3001_gyro_offset", [0, 0, 0])
 
         self.init()
 
@@ -555,6 +557,7 @@ class SH3001():
             offset_list (list): Acceleration offset.
         '''
         self.acc_offset = offset_list
+        self.config.set("sh3001_acc_offset", self.acc_offset)
 
     def set_gyro_offset(self, offset_list:list) -> None:
         ''' Set gyroscope offset
@@ -563,6 +566,7 @@ class SH3001():
             offset_list (list): Gyroscope offset.
         '''
         self.gyro_offset = offset_list
+        self.config.set("sh3001_gyro_offset", self.gyro_offset)
 
     def calibrate_gyro(self, times: int = 100) -> list:
         ''' Calibrate gyroscope
@@ -576,6 +580,7 @@ class SH3001():
             datas.append(gyro_data.list())
             time.sleep(0.01)
         self.gyro_offset = [sum([v[i] for v in datas]) / len(datas) for i in range(3)]
+        self.config.set("sh3001_gyro_offset", self.gyro_offset)
         return self.gyro_offset
 
     def calibrate_accel_prepare(self) -> None:
@@ -607,4 +612,6 @@ class SH3001():
         accel_min = list(map(min, *self.accel_cali_temp))
         # Calculate offset
         self.acc_offset = [(accel_max[i] + accel_min[i]) / 2 for i in range(3)]
+        self.config.set("sh3001_acc_offset", self.acc_offset)
+
         return self.acc_offset, accel_max, accel_min

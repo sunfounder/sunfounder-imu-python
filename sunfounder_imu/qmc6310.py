@@ -1,6 +1,7 @@
 from ._i2c import I2C
 from ._base import _Base
 from ._utils import twos_complement, mapping
+from .data_type import MagDate
 
 import math
 from typing import Optional
@@ -79,8 +80,8 @@ class QMC6310(_Base):
                 address = addresses[0]
         self.i2c = I2C(address=address)
         self.address = address
-        self.offsets = [0, 0, 0]
-        self.scales = [1.0, 1.0, 1.0]
+        self.offsets = self.config.get("qmc6310_offsets", [0, 0, 0])
+        self.scales = self.config.get("qmc6310_scales", [1.0, 1.0, 1.0])
         self.calibrate_data_temp = None
 
         self.init(
@@ -137,9 +138,9 @@ class QMC6310(_Base):
         data = [mapping(d, -32768, 32767, -self.range, self.range) for d in data]
         if not raw:
             data = [(value - self.offsets[i]) * self.scales[i] for i, value in enumerate(data)]
-        return tuple(data)
+        return MagDate(*data)
 
-    def get_azimuth(self, data: Optional[tuple[float, float, float]]=None, plane: str='xy') -> float:
+    def get_azimuth(self, data: Optional[MagDate|tuple[float, float, float]]=None, plane: str='xy') -> float:
         ''' Get the azimuth angle.
 
         Args:
@@ -151,6 +152,8 @@ class QMC6310(_Base):
         '''
         if data is None:
             data = self.get_magnetometer_data()
+        if isinstance(data, MagDate):
+            data = data.list()
         x, y, z = data
         if plane == 'xy':
             azimuth = math.atan2(x, y) * 180.0 / math.pi
@@ -169,11 +172,11 @@ class QMC6310(_Base):
         ''' Read the magnetometer data.
 
         Returns:
-            tuple[float, float, float]: Magnetometer data in uT.
+            tuple[MagDate, float]: Magnetometer data in uT and azimuth angle in degrees.
         '''
-        x, y, z = self.get_magnetometer_data()
-        azimuth = self.get_azimuth(data=(x, y, z))
-        return x, y, z, azimuth
+        mag_data = self.get_magnetometer_data()
+        azimuth = self.get_azimuth(data=mag_data)
+        return mag_data, azimuth
 
     def set_calibration(self, offsets: list[float], scales: list[float]) -> None:
         ''' Set the calibration offset and scale.
@@ -184,6 +187,8 @@ class QMC6310(_Base):
         '''
         self.offsets = offsets
         self.scales = scales
+        self.config.set("qmc6310_offsets", self.offsets)
+        self.config.set("qmc6310_scales", self.scales)
 
     def calibrate_prepare(self) -> None:
         ''' Prepare the device for calibration.
@@ -197,7 +202,7 @@ class QMC6310(_Base):
             data (Optional[tuple[float, float, float]], optional): Magnetometer data in uT. Defaults to None.
         '''
         if data is None:
-            data = self.get_magnetometer_data(raw=True)
+            data = self.get_magnetometer_data(raw=True).list()
         if self.calibrate_data_temp is None:
             self.calibrate_data_temp = []
         self.calibrate_data_temp.append(data)
@@ -221,5 +226,7 @@ class QMC6310(_Base):
 
         self.offsets = [round(offset, 2) for offset in offsets]
         self.scales = [round(scale, 2) for scale in scales]
+        self.config.set("qmc6310_offsets", self.offsets)
+        self.config.set("qmc6310_scales", self.scales)
 
         return self.offsets, self.scales

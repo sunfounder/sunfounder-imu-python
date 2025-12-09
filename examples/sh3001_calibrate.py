@@ -9,7 +9,7 @@ def calibrate_gyro():
     print("Let's calibrate the gyroscope. set the device down and DO NOT move it until the calibration is complete.")
     input("When you are ready, press any key to continue.")
     gyro_offsets = imu.calibrate_gyro()
-    print("Gyroscope calibration complete.")
+    print("Gyroscope calibration complete. data saved.")
     print(f"Gyroscope offsets: {gyro_offsets}")
 
 def calibrate_accel(seconds: int=10):
@@ -25,7 +25,7 @@ def calibrate_accel(seconds: int=10):
         print(f"({delta_time:.2f}/{seconds:.2f}), Acceleration: {data}                 ", end="\r")
         time.sleep(0.001)
     accel_offsets, accel_max, accel_min = imu.calibrate_accel_finish()
-    print("Accelerometer calibration complete.")
+    print("Accelerometer calibration complete. data saved.")
     print(f"Accelerometer offsets: {accel_offsets}")
     print(f"Accelerometer max: {accel_max}")
     print(f"Accelerometer min: {accel_min}")

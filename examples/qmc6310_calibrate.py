@@ -16,7 +16,8 @@ def calibrate_magnetometer(seconds: int=20) -> None:
         if during > seconds:
             break
     offsets, scales = mag.calibrate_finish()
-    print(f"Offsets: {offsets}")
-    print(f"Scales: {scales}")
+    print("Calibration complete. data saved.")
+    print(f"  Offsets: {offsets}")
+    print(f"  Scales: {scales}")
 
 calibrate_magnetometer()
