@@ -39,11 +39,20 @@ def retry(times: int = 5):
     return decorator
 
 def twos_complement(val, bits):
-    # 第一步：截断高位，确保val仅保留bits位（处理超出位宽的情况）
-    mask = (1 << bits) - 1  # 生成bits位全1的掩码（如24位→0xFFFFFF）
-    val = val & mask        # 保留低bits位，丢弃高位
+    """ Convert a two's complement value to a signed integer.
+
+    Args:
+        val (int): The two's complement value to convert.
+        bits (int): The number of bits used to represent the value.
+
+    Returns:
+        int: The signed integer value.
+    """
+    # Get the mask to keep only the lower bits, ensuring val only retains bits bits (handles cases where val exceeds bit width)
+    mask = (1 << bits) - 1  # Generate a mask with bits bits set to 1 (e.g., 24 bits → 0xFFFFFF)
+    val = val & mask        # Keep only the lower bits, discarding the higher bits
     
-    # 第二步：补码转换（核心逻辑不变）
+    # Convert to signed integer (core logic remains the same)
     if val & (1 << (bits - 1)):
         val -= (1 << bits)
     return val
