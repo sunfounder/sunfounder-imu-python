@@ -7,11 +7,11 @@ mag.set_calibration(
     scales=[1.03, 1.01, 0.96])
 
 while True:
-    x, y, z, azimuth = mag.read()
+    mag_data, azimuth = mag.read()
     print(f"Magnetometer: ")
-    print(f"  x: {x:.2f} uT")
-    print(f"  y: {y:.2f} uT")
-    print(f"  z: {z:.2f} uT")
+    print(f"  x: {mag_data.x:.2f} uT")
+    print(f"  y: {mag_data.y:.2f} uT")
+    print(f"  z: {mag_data.z:.2f} uT")
     print(f"  azimuth: {azimuth:.2f} degrees")
     time.sleep(0.1)
 
