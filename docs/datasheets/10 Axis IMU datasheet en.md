@@ -129,6 +129,8 @@ The XYZ axis directions are printed on the PCB silkscreen. The top of the PCB is
 
 ## Reference Wiring Diagram
 
+The module I2C bus data line has a built-in 10K pull-up resistor, so no additional pull-up resistor is needed when connecting to the MCU.
+
 ![10 Axis IMU Reference Wiring Diagram](imgs/10%20Axis%20IMU%20参考应用电路.png)
 
 ## Schematic Diagrams
@@ -144,6 +146,6 @@ The XYZ axis directions are printed on the PCB silkscreen. The top of the PCB is
 
 ## Reference
 
-[SH3001 datasheet](SH3001.pdf)
-[QMC6310 datasheet](QMC6310.pdf)
-[SPL06-001 datasheet](SPL06-001.pdf)
+- [SH3001 datasheet](SH3001.pdf)
+- [QMC6310 datasheet](QMC6310.pdf)
+- [SPL06-001 datasheet](SPL06-001.pdf)
