@@ -382,14 +382,14 @@ class SH3001(_Base):
             self.i2c.write_byte_data(self.REG_ACC_CONF3, conf_3)
         
     def set_gyroscope_configuration(self, 
-        inactive_detect_enable:Optional[bool]=None,
-        filter_enable:Optional[bool]=None,
-        odr:Optional[bytes]=None,
-        low_pass_filter_enable:Optional[bool]=None,
-        low_pass_filter:Optional[bytes]=None,
-        range_x:Optional[bytes]=None,
-        range_y:Optional[bytes]=None,
-        range_z:Optional[bytes]=None) -> None:
+            inactive_detect_enable:Optional[bool]=None,
+            filter_enable:Optional[bool]=None,
+            odr:Optional[bytes]=None,
+            low_pass_filter_enable:Optional[bool]=None,
+            low_pass_filter:Optional[bytes]=None,
+            range_x:Optional[bytes]=None,
+            range_y:Optional[bytes]=None,
+            range_z:Optional[bytes]=None) -> None:
         ''' Gyroscope configuration
         
         Args:
