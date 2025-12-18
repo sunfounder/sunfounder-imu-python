@@ -46,14 +46,32 @@ class IMU:
         self.q = np.array([1.0, 0.0, 0.0, 0.0])  # w, x, y, z
         self.integral_error = np.array([0.0, 0.0, 0.0])
 
+        sensors = self.find_sensor()
+        for address, class_type in sensors.items():
+            if class_type == SPL06_001:
+                self.barometer_sensor = class_type(address)
+            elif class_type == SH3001:
+                self.accel_gyro_sensor = class_type(address)
+            elif class_type == QMC6310:
+                self.magenatic_sensor = class_type(address)
+
+    def find_sensor(self) -> bool:
+        """ Find all sensors connected to the I2C bus
+            
+        Returns:
+            dict: Dictionary containing sensor objects
+        """
         addresses = I2C.scan()
+        sensors = {}
+
         for address in addresses:
             if address in self.BAROMETER_ADDRESS_MAP:
-                self.barometer_sensor = self.BAROMETER_ADDRESS_MAP[address]()
+                sensors[address] = self.BAROMETER_ADDRESS_MAP[address]
             if address in self.ACCEL_GYRO_ADDRESS_MAP:
-                self.accel_gyro_sensor = self.ACCEL_GYRO_ADDRESS_MAP[address]()
+                sensors[address] = self.ACCEL_GYRO_ADDRESS_MAP[address]
             if address in self.MAGNETOMETER_ADDRESS_MAP:
-                self.magenatic_sensor = self.MAGNETOMETER_ADDRESS_MAP[address]()
+                sensors[address] = self.MAGNETOMETER_ADDRESS_MAP[address]
+        return sensors
 
     def read_raw(self):
         """ Get all measurements in one call
@@ -61,6 +79,7 @@ class IMU:
         Returns:
             dict: Dictionary containing temperature, pressure, and altitude
         """
+
         if self.barometer_sensor is not None:
             self.temperature, self.pressure, self.altitude = self.barometer_sensor.read()
         if self.accel_gyro_sensor is not None:

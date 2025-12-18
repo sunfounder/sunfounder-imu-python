@@ -15,7 +15,15 @@ from sunfounder_imu import IMU
 
 def main():
     imu = IMU()
-
+    sensors = imu.find_sensor()
+    if len(sensors) == 0:
+        print("No sensor found.")
+        return
+    for address, class_type in sensors.items():
+        name = class_type.__name__
+        print(f"Found sensor {name} at address 0x{address:02X}")
+    sleep(3)
+    
     try:
         while True:
             data = imu.read()
