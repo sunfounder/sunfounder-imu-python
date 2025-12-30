@@ -64,10 +64,10 @@ def calibrate_accel_mag():
         mag_x, mag_y, mag_z = imu.calibrate_mag_step()
         print(f"\033[KAcceleration: ({accel_x:5.2f}, {accel_y:5.2f}, {accel_z:5.2f}), Magnetometer: ({mag_x:6.2f}, {mag_y:6.2f}, {mag_z:6.2f})", end="\r")
         time.sleep(0.01)
-    accel_offsets, accel_scale, accel_max, accel_min = imu.calibrate_accel_finish()
+    accel_offsets, accel_max, accel_min = imu.calibrate_accel_finish()
     mag_offsets, mag_scales = imu.calibrate_mag_finish()
 
-    return accel_offsets, accel_scale, accel_max, accel_min, mag_offsets, mag_scales
+    return accel_offsets, accel_max, accel_min, mag_offsets, mag_scales
 
 def main():
     print("\nCalibration\n")
@@ -82,9 +82,8 @@ def main():
     print(f"SLOWLY spin the device in all axis and directions.")
     input("\nWhen you are ready, press ENTER to continue.")
     print("Calibrating accelerometer and magnetometer... press ENTER when done.")
-    accel_offsets, accel_scale, accel_max, accel_min, mag_offsets, mag_scales = calibrate_accel_mag()
+    accel_offsets, accel_max, accel_min, mag_offsets, mag_scales = calibrate_accel_mag()
     print(f"Accelerometer offsets: {accel_offsets}")
-    # print(f"Accelerometer scale: {accel_scale}")
     print(f"Accelerometer max: {accel_max}")
     print(f"Accelerometer min: {accel_min}")
     print(f"Magnetometer offsets: {mag_offsets}")

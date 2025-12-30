@@ -16,14 +16,12 @@ class AccelGyroSensor(_Base):
             address: int,
             *args,
             acc_offset: list=[0, 0, 0],
-            acc_scale: list=[1.0, 1.0, 1.0],
             gyro_offset: list=[0, 0, 0],
             **kwargs):
         super().__init__(address, *args, **kwargs)
         self.address = address
 
         self.acc_offset = acc_offset
-        self.acc_scale = acc_scale
         self.gyro_offset = gyro_offset
 
         self.temperature = None
@@ -59,8 +57,6 @@ class AccelGyroSensor(_Base):
         # Accel data
         # apply offset
         accel_data = [v - self.acc_offset[i] for i, v in enumerate(accel_data)]
-        # apply scale
-        accel_data = [v * self.acc_scale[i] for i, v in enumerate(accel_data)]
         # convert to m/s^2
         accel_data = [v * self.G for v in accel_data]
         # round to 2 decimal places
@@ -137,28 +133,22 @@ class AccelGyroSensor(_Base):
         accel_min = list(map(min, *self.accel_cali_temp))
         # Calculate offset
         self.acc_offset = list(map(lambda x, y: (x + y) / 2, accel_max, accel_min))
-        self.acc_scale = list(map(lambda x, y: 2 / (x - y), accel_max, accel_min))
         # Round to 2 decimal places
         self.acc_offset = [round(v, 2) for v in self.acc_offset]
-        self.acc_scale = [round(v, 2) for v in self.acc_scale]
 
-        return self.acc_offset, self.acc_scale, accel_max, accel_min
+        return self.acc_offset, accel_max, accel_min
 
     def set_calibration_data(self,
             acc_offset: Optional[list]=None,
-            acc_scale: Optional[list]=None,
             gyro_offset: Optional[list]=None) -> None:
         ''' Set calibration data
         
         Args:
             acc_offset (list, optional): Acceleration offset. Defaults to [0, 0, 0].
-            acc_scale (list, optional): Acceleration scale. Defaults to [1.0, 1.0, 1.0].
             gyro_offset (list, optional): Gyroscope offset. Defaults to [0, 0, 0].
         '''
         if acc_offset is not None:
             acc_offset = acc_offset
-        if acc_scale is not None:
-            acc_scale = acc_scale
         if gyro_offset is not None:
             gyro_offset = gyro_offset
 
@@ -169,14 +159,6 @@ class AccelGyroSensor(_Base):
             offset_list (list): Acceleration offset.
         '''
         self.acc_offset = offset_list
-
-    def set_accel_scale(self, scale_list:list) -> None:
-        ''' Set acceleration scale
-        
-        Args:
-            scale_list (list): Acceleration scale.
-        '''
-        self.acc_scale = scale_list
 
     def set_gyro_offset(self, offset_list:list) -> None:
         ''' Set gyroscope offset

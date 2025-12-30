@@ -45,9 +45,8 @@ class IMU(_Base):
         self.accel_gyro = get_accel_gyro_sensor(addresses)
         if self.accel_gyro is not None:
             accel_offset = self.config.get(f"accel_offset", default=[0, 0, 0])
-            accel_scale = self.config.get(f"accel_scale", default=[1.0, 1.0, 1.0])
             gyro_offset = self.config.get(f"gyro_offset", default=[0, 0, 0])
-            self.accel_gyro.set_calibration_data(accel_offset, accel_scale, gyro_offset)
+            self.accel_gyro.set_calibration_data(accel_offset, gyro_offset)
         else:
             self.log.warning("No accelerometer-gyroscope sensor found.")
         
@@ -205,12 +204,10 @@ class IMU(_Base):
 
     def calibrate_accel_finish(self) -> list:
         """Calibrate the accelerometer, return current calibration data."""
-        acc_offset, acc_scale, acc_max, acc_min = self.accel_gyro.calibrate_accel_finish()
+        acc_offset, acc_max, acc_min = self.accel_gyro.calibrate_accel_finish()
         self.accel_gyro.set_accel_offset(acc_offset)
-        # self.accel_gyro.set_accel_scale(acc_scale)
         self.config.set(f"accel_offset", acc_offset)
-        # self.config.set(f"accel_scale", acc_scale)
-        return acc_offset, acc_scale, acc_max, acc_min
+        return acc_offset, acc_max, acc_min
 
     def calibrate_gyro_prepare(self) -> None:
         """Calibrate the gyroscope, prepare calibration data."""
