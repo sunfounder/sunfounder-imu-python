@@ -4,12 +4,13 @@ This module provides a Python interface for the SPL06-01 barometer sensor,
 allowing for accurate pressure and temperature measurements.
 """
 
-from ._base import _Base
-from ._i2c import I2C
-from ._utils import twos_complement
 import time
 
-class SPL06_001(_Base):
+from .baro_sensor import BaroSensor
+from .._i2c import I2C
+from .._utils import twos_complement
+
+class SPL06_001(BaroSensor):
     """ SPL06-001 Barometer Sensor Class
     
     This class provides an interface to the SPL06-01 barometer sensor,
@@ -76,8 +77,6 @@ class SPL06_001(_Base):
         2088960    # RATE_128 (128 times)
     ]
 
-    P0 = 1013.25  # Standard sea level pressure in hPa
-
     def __init__(self,
         *args,
         address=None,
@@ -88,17 +87,15 @@ class SPL06_001(_Base):
         temperature_precision=RATE_128,
         **kwargs
         ):
-        super().__init__(*args, **kwargs)
-        
         if address is None:
             addresses = I2C.scan(search=self.I2C_ADDRESSES)
             if addresses:
                 address = addresses[0]
         self.i2c = I2C(address=address)
         self.address = address
-        self.sea_level_pressure = self.config.get("spl06_001_sea_level_pressure", self.P0)
-        self.offset = self.config.get("spl06_001_offset", 0)
 
+        super().__init__(address, *args, **kwargs)
+        
         self._init(mode, pressure_rate, pressure_precision, temperature_rate, temperature_precision)
 
     def set_pressure_configuration(self, rate, precision):
@@ -282,7 +279,7 @@ class SPL06_001(_Base):
         value = twos_complement(value, 24)
         return value
     
-    def get_temperature(self) -> float:
+    def read_temperature(self) -> float:
         """ Get the current temperature in Celsius
         
         Returns:
@@ -303,7 +300,7 @@ class SPL06_001(_Base):
         
         return temperature
     
-    def get_pressure(self) -> float:
+    def read_pressure(self) -> float:
         """ Get the current pressure in Pascals
         
         Returns:
@@ -332,51 +329,3 @@ class SPL06_001(_Base):
         pressure += self.offset
         
         return pressure / 100.0
-    
-    def get_altitude(self, pressure=None) -> float:
-        """ Calculate altitude based on pressure
-        
-        Args:
-            pressure (float): Pressure in Pascals (default: current pressure)
-
-        Returns:
-            float: Altitude in meters
-        """
-        # Use provided sea level pressure P0 or the stored one
-        if pressure is None:
-            pressure = self.get_pressure()
-        
-        # Barometric formula for altitude calculation
-        altitude = 44330.0 * (1.0 - ((pressure / self.sea_level_pressure) ** 0.1903))
-        
-        return altitude
-    
-    def read(self):
-        """ Get all measurements in one call
-            
-        Returns:
-            dict: Dictionary containing temperature, pressure, and altitude
-        """
-        temperature = self.get_temperature()
-        pressure = self.get_pressure()
-        altitude = self.get_altitude(pressure=pressure)
-        
-        return (temperature, pressure, altitude)
-
-    def set_sea_level_pressure(self, pressure: float) -> None:
-        """ Set the sea level pressure for altitude calculations
-        
-        Args:
-            pressure (float): Sea level pressure in Pascals
-        """
-        self.sea_level_pressure = pressure
-        self.config.set("sea_level_pressure", pressure)
-
-    def set_offset(self, offset: float) -> None:
-        """ Set the offset for pressure calculations
-        
-        Args:
-            offset (float): Offset value in Pascals
-        """
-        self.offset = offset
-        self.config.set("offset", offset)

@@ -23,19 +23,19 @@ class Config():
                 content = '{}'
             self._config = json.loads(content)
 
-    def get(self, key: str, default_value: Any = None) -> Any:
+    def get(self, key: str, default: Any = None) -> Any:
         """ Get the value of the key
 
         Args:
             key (str): key name
-            default_value (optional): default value if the key is not found. Defaults to None.
+            default (optional): default value if the key is not found. Defaults to None.
 
         Returns:
             Any: value of the key
         """
-        return self._config.get(key, default_value)
+        return self._config.get(key, default)
 
-    def set(self, key: str, value: Any) -> None:
+    def set(self, key: str, value: Any, save: bool = True) -> None:
         """ Set the value of the key
 
         Args:
@@ -43,8 +43,18 @@ class Config():
             value (Any): value of the key
         """
         self._config[key] = value
+        if save:
+            self.save()
+
+    def save(self) -> None:
+        """ Save the config to the file
+        """
+        content = "{\n"
+        for key, value in self._config.items():
+            content += f'  "{key}": {json.dumps(value)},\n'
+        content = content[:-2] + "\n}"
         with open(self.config_file, 'w') as f:
-            json.dump(self._config, f, indent=4)
+            f.write(content)
 
     def delete(self, key: str) -> None:
         """ Delete the key

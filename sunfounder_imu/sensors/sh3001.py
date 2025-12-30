@@ -1,14 +1,13 @@
 #!/usr/bin/env python3
-import time
 import struct
 from typing import Optional
-from .data_type import AccelDate, GyroDate
 
-from ._i2c import I2C
-from ._utils import mapping
-from ._base import _Base
+from .accel_gyro_sensor import AccelGyroSensor
 
-class SH3001(_Base):
+from .._i2c import I2C
+from .._utils import mapping
+
+class SH3001(AccelGyroSensor):
     I2C_ADDRESSES = [0x36, 0x37]
 
     # region: Macro Definitions
@@ -271,22 +270,20 @@ class SH3001(_Base):
         ACC_RANGE_16G: 16,
     }
 
-    G = 9.80665
-
     # init
     def __init__(self, *args, address=None, **kwargs):
-        super().__init__(*args, **kwargs)
         if address is None:
             addresses = I2C.scan(search=self.I2C_ADDRESSES)
             if addresses:
                 address = addresses[0]
+            else:
+                raise ValueError("SH3001 not found")
+
+        super().__init__(address, *args, **kwargs)
 
         self.i2c = I2C(address=address)
         self.accel_range = 16
         self.gyro_range = [2000, 2000, 2000]
-
-        self.acc_offset = self.config.get("sh3001_acc_offset", [0, 0, 0])
-        self.gyro_offset = self.config.get("sh3001_gyro_offset", [0, 0, 0])
 
         self.init()
 
@@ -491,7 +488,7 @@ class SH3001(_Base):
 
         return temperature
 
-    def read_accel(self, data:Optional[list]=None, raw:Optional[bool]=False) -> AccelDate:
+    def read_accel(self, data:Optional[list]=None, raw:Optional[bool]=False) -> tuple:
         ''' Read acceleration
         
         Args:
@@ -499,24 +496,27 @@ class SH3001(_Base):
             raw (Optional[bool], optional): Raw data. Defaults to False.
 
         Returns:
-            AccelDate: Acceleration data
+            tuple: Acceleration data
         '''
         if data is None:
             data = self.i2c.read_i2c_block_data(self.REG_ACC_X, 6)
 
         data = bytes(data)
         values = struct.unpack_from('hhh', data, 0)
+        # Convert acceleration data to g
+        values = [mapping(v, -0x8000, 0x7FFF, -self.accel_range, self.accel_range) for v in values]
         if not raw:
             # apply offset
             values = [v - self.acc_offset[i] for i, v in enumerate(values)]
-            # Convert acceleration data to g
-            values = [mapping(v, -0x8000, 0x7FFF, -self.accel_range, self.accel_range) for v in values]
-            # Convert acceleration data to m/s^2
-            values = [v * self.G for v in values]
+            # apply scale
+            values = [v / self.acc_scale[i] for i, v in enumerate(values)]
 
-        return AccelDate(*values)
+        # round to 2 decimal places
+        values = [round(v, 2) for v in values]
 
-    def read_gyro(self, data:Optional[list]=None, raw:Optional[bool]=False) -> GyroDate:
+        return tuple(values)
+
+    def read_gyro(self, data:Optional[list]=None, raw:Optional[bool]=False) -> tuple:
         ''' Read gyroscope
         
         Args:
@@ -524,20 +524,23 @@ class SH3001(_Base):
             raw (Optional[bool], optional): Raw data. Defaults to False.
 
         Returns:
-            GyroDate: Gyroscope data
+            tuple: Gyroscope data
         '''
         if data is None:
             data = self.i2c.read_i2c_block_data(self.REG_GYRO_X, 6)
 
         data = bytes(data)
         values = struct.unpack_from('hhh', data, 0)
+        # Convert gyroscope data to dps
+        values = [mapping(v, -0x8000, 0x7FFF, -self.gyro_range[i], self.gyro_range[i]) for i, v in enumerate(values)]
         if not raw:
             # apply offset
             values = [v - self.gyro_offset[i] for i, v in enumerate(values)]
-            # Convert gyroscope data to dps
-            values = [mapping(v, -0x8000, 0x7FFF, -self.gyro_range[i], self.gyro_range[i]) for i, v in enumerate(values)]
 
-        return GyroDate(*values)
+        # round to 2 decimal places
+        values = [round(v, 2) for v in values]
+
+        return tuple(values)
 
     def read(self) -> tuple:
         ''' Read all data
@@ -546,72 +549,7 @@ class SH3001(_Base):
             tuple: Acceleration data, Gyroscope data, Temperature
         '''
         data = self.i2c.read_i2c_block_data(self.REG_ACC_X, 14)
-        accel_data = self.read_accel(data[:6])
-        gyro_data = self.read_gyro(data[6:12])
-        return accel_data, gyro_data
-
-    def set_accel_offset(self, offset_list:list) -> None:
-        ''' Set acceleration offset
-        
-        Args:
-            offset_list (list): Acceleration offset.
-        '''
-        self.acc_offset = offset_list
-        self.config.set("sh3001_acc_offset", self.acc_offset)
-
-    def set_gyro_offset(self, offset_list:list) -> None:
-        ''' Set gyroscope offset
-        
-        Args:
-            offset_list (list): Gyroscope offset.
-        '''
-        self.gyro_offset = offset_list
-        self.config.set("sh3001_gyro_offset", self.gyro_offset)
-
-    def calibrate_gyro(self, times: int = 100) -> list:
-        ''' Calibrate gyroscope
-        
-        Args:
-            times (int, optional): Calibration times. Defaults to 100.
-        '''
-        datas = []
-        for _ in range(times):
-            gyro_data = self.read_gyro(raw=True)
-            datas.append(gyro_data.list())
-            time.sleep(0.01)
-        self.gyro_offset = [sum([v[i] for v in datas]) / len(datas) for i in range(3)]
-        self.config.set("sh3001_gyro_offset", self.gyro_offset)
-        return self.gyro_offset
-
-    def calibrate_accel_prepare(self) -> None:
-        ''' Prepare accelerometer calibration, clear temp datas
-        '''
-        self.accel_cali_temp = []
-
-    def calibrate_accel_step(self) -> None:
-        ''' Calibration accelerometer step, read and store raw data
-        '''
-        if self.accel_cali_temp is None:
-            self.calibrate_accel_prepare()
-        accel_data = self.read_accel(raw=True).list()
-        self.accel_cali_temp.append(accel_data)
-        return accel_data
-
-    def calibrate_accel_finish(self) -> list:
-        ''' Calibration finish, calculate offset
-
-        Returns:
-            list: Acceleration offset
-        '''
-        if self.accel_cali_temp is None:
-            raise ValueError('Calibration data is empty')
-        
-        # Calculate accelrometer offset
-        # Get max and min values
-        accel_max = list(map(max, *self.accel_cali_temp))
-        accel_min = list(map(min, *self.accel_cali_temp))
-        # Calculate offset
-        self.acc_offset = [(accel_max[i] + accel_min[i]) / 2 for i in range(3)]
-        self.config.set("sh3001_acc_offset", self.acc_offset)
-
-        return self.acc_offset, accel_max, accel_min
+        self.accel_x, self.accel_y, self.accel_z = self.read_accel(data[:6])
+        self.gyro_x, self.gyro_y, self.gyro_z = self.read_gyro(data[6:12])
+        self.temperature = self.read_temperature(data[12:])
+        return (self.accel_x, self.accel_y, self.accel_z), (self.gyro_x, self.gyro_y, self.gyro_z), self.temperature
