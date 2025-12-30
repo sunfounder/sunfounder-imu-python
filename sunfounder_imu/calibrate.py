@@ -62,7 +62,7 @@ def calibrate_accel_mag():
     while not key_pressed:
         accel_x, accel_y, accel_z = imu.calibrate_accel_step()
         mag_x, mag_y, mag_z = imu.calibrate_mag_step()
-        print(f"\033[KAcceleration: ({accel_x:5}, {accel_y:5}, {accel_z:5}), Magnetometer: ({mag_x:6.2f}, {mag_y:6.2f}, {mag_z:6.2f})", end="\r")
+        print(f"\033[KAcceleration: ({accel_x:5.2f}, {accel_y:5.2f}, {accel_z:5.2f}), Magnetometer: ({mag_x:6.2f}, {mag_y:6.2f}, {mag_z:6.2f})", end="\r")
         time.sleep(0.01)
     accel_offsets, accel_scale, accel_max, accel_min = imu.calibrate_accel_finish()
     mag_offsets, mag_scales = imu.calibrate_mag_finish()
@@ -84,7 +84,7 @@ def main():
     print("Calibrating accelerometer and magnetometer... press ENTER when done.")
     accel_offsets, accel_scale, accel_max, accel_min, mag_offsets, mag_scales = calibrate_accel_mag()
     print(f"Accelerometer offsets: {accel_offsets}")
-    print(f"Accelerometer scale: {accel_scale}")
+    # print(f"Accelerometer scale: {accel_scale}")
     print(f"Accelerometer max: {accel_max}")
     print(f"Accelerometer min: {accel_min}")
     print(f"Magnetometer offsets: {mag_offsets}")

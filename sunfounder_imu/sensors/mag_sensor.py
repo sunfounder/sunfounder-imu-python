@@ -10,18 +10,29 @@ class MagSensor(_Base):
     Args:
         address (int): I2C address of the mag sensor.
     """
-    def __init__(self, address: int, *args, **kwargs):
+    def __init__(self, address: int, *args, offset: Optional[list[float]]=[0.0, 0.0, 0.0], scale: Optional[list[float]]=[1.0, 1.0, 1.0], **kwargs):
         super().__init__(address, *args, **kwargs)
         self.address = address
 
-        self.mag_x = None
-        self.mag_y = None
-        self.mag_z = None
         self.azimuth = None
         self.calibrate_data_temp = None
+        self.offsets = offset
+        self.scales = scale
+
+    def read_raw_mag(self) -> tuple[float, float, float]:
+        raise NotImplementedError("read_raw method not implemented")
 
     def read_magnetometer(self, raw: bool=False) -> tuple[float, float, float]:
-        raise NotImplementedError("read_magnetometer method not implemented")
+        ''' Get the magnetometer data.
+
+        Args:
+            raw (bool, optional): Whether to return the raw magnetometer data. Defaults to False.
+
+        Returns:
+            tuple[float, float, float]: Magnetometer data in gauss.
+        '''
+        mag_data = self.read_raw_mag()
+        return mag_data
 
     def read_azimuth(self, data: Optional[list[float]]=None, plane: str='xy') -> float:
         ''' Get the azimuth angle.
@@ -58,9 +69,17 @@ class MagSensor(_Base):
         Returns:
             tuple[tuple[float, float, float], float]: Magnetometer data in gauss and azimuth angle in degrees.
         '''
-        x, y, z = self.read_magnetometer()
-        azimuth = self.read_azimuth(data=[x, y, z])
-        return (x, y, z), azimuth
+        mag_data = self.read_magnetometer()
+        
+        # apply offset
+        mag_data = [v - self.offsets[i] for i, v in enumerate(mag_data)]
+        # apply scale
+        mag_data = [v * self.scales[i] for i, v in enumerate(mag_data)]
+        # round to 3 decimal places
+        mag_data = [round(v, 3) for v in mag_data]
+
+        azimuth = self.read_azimuth(data=mag_data)
+        return mag_data, azimuth
 
     def set_calibration_data(self, offsets: list[float], scales: list[float]) -> None:
         ''' Set the calibration offset and scale.
@@ -102,7 +121,7 @@ class MagSensor(_Base):
         data_max = list(map(max, zip(*self.calibrate_data_temp)))
         # Bottom calculation is from zeus-car
         offsets = list(map(lambda x, y: (x + y) / 2, data_min, data_max))
-        scales = list(map(lambda x, y: (y - x) / 2, data_min, data_max))
+        scales = list(map(lambda x, y: 2 / (y - x), data_min, data_max))
         avg_scale = sum(scales) / len(scales)
         scales = list(map(lambda x: avg_scale / x, scales))
 

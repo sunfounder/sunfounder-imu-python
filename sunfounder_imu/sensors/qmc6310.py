@@ -120,11 +120,8 @@ class QMC6310(MagSensor):
         # Set control register 1
         self.i2c.write_byte_data(self.REG_CTL_1, mode | odr | osr1 | osr2)
 
-    def read_magnetometer(self, raw: bool=False) -> tuple[float, float, float]:
-        ''' Get the magnetometer data.
-
-        Args:
-            raw (bool, optional): Whether to return the raw magnetometer data. Defaults to False.
+    def read_raw_mag(self) -> tuple[float, float, float]:
+        ''' Get raw magnetometer data.
 
         Returns:
             tuple[float, float, float]: Magnetometer data in gauss.
@@ -132,6 +129,4 @@ class QMC6310(MagSensor):
         data = [self.i2c.read_word_data(reg) for reg in self.DATA_REGS]
         data = [twos_complement(d, 16) for d in data]
         data = [mapping(d, -32768, 32767, -self.range, self.range) for d in data]
-        if not raw:
-            data = [(value - self.offsets[i]) * self.scales[i] for i, value in enumerate(data)]
         return tuple(data)

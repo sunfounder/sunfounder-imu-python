@@ -1,3 +1,4 @@
+from typing import Optional
 
 from .._base import _Base
 
@@ -11,7 +12,13 @@ class AccelGyroSensor(_Base):
     
     G = 9.80665
 
-    def __init__(self, address: int, *args, acc_offset: list=[0, 0, 0], acc_scale: list=[1.0, 1.0, 1.0], gyro_offset: list=[0, 0, 0], **kwargs):
+    def __init__(self,
+            address: int,
+            *args,
+            acc_offset: list=[0, 0, 0],
+            acc_scale: list=[1.0, 1.0, 1.0],
+            gyro_offset: list=[0, 0, 0],
+            **kwargs):
         super().__init__(address, *args, **kwargs)
         self.address = address
 
@@ -29,14 +36,17 @@ class AccelGyroSensor(_Base):
         self.gyro_cali_temp = None
         self.accel_cali_temp = None
 
-    def read_temperature(self) -> float:
-        raise NotImplementedError("read_temperature method not implemented")
+    def read_raw(self) -> [float]:
+        raise NotImplementedError("_read method not implemented")
 
-    def read_accel(self) -> [float]:
-        raise NotImplementedError("read_accel method not implemented")
+    def read_raw_accel(self) -> [float]:
+        raise NotImplementedError("_read_accel method not implemented")
+        
+    def read_raw_gyro(self) -> [float]:
+        raise NotImplementedError("_read_gyro method not implemented")
 
-    def read_gyro(self) -> [float]:
-        raise NotImplementedError("read_gyro method not implemented")
+    def read_raw_temperature(self) -> float:
+        raise NotImplementedError("_read_temp method not implemented")
 
     def read(self) -> tuple:
         ''' Read all data
@@ -44,9 +54,28 @@ class AccelGyroSensor(_Base):
         Returns:
             tuple: (accel_x, accel_y, accel_z), (gyro_x, gyro_y, gyro_z), temperature
         '''
-        self.temperature = self.read_temperature()
-        self.accel_x, self.accel_y, self.accel_z = self.read_accel()
-        self.gyro_x, self.gyro_y, self.gyro_z = self.read_gyro()
+        accel_data, gyro_data, temperature = self.read_raw()
+        
+        # Accel data
+        # apply offset
+        accel_data = [v - self.acc_offset[i] for i, v in enumerate(accel_data)]
+        # apply scale
+        accel_data = [v * self.acc_scale[i] for i, v in enumerate(accel_data)]
+        # convert to m/s^2
+        accel_data = [v * self.G for v in accel_data]
+        # round to 2 decimal places
+        accel_data = [round(v, 2) for v in accel_data]
+
+        # Gyro data
+        # apply offset
+        gyro_data = [v - self.gyro_offset[i] for i, v in enumerate(gyro_data)]
+        # round to 2 decimal places
+        gyro_data = [round(v, 2) for v in gyro_data]
+
+        self.accel_x, self.accel_y, self.accel_z = accel_data
+        self.gyro_x, self.gyro_y, self.gyro_z = gyro_data
+        self.temperature = temperature
+
         return (self.accel_x, self.accel_y, self.accel_z), (self.gyro_x, self.gyro_y, self.gyro_z), self.temperature
 
     def calibrate_gyro_prepare(self) -> None:
@@ -60,7 +89,7 @@ class AccelGyroSensor(_Base):
         Returns:
             list: Gyroscope data
         '''
-        gyro_data = list(self.read_gyro(raw=True))
+        gyro_data = list(self.read_raw_gyro())
         self.gyro_cali_temp.append(gyro_data)
         return gyro_data
     
@@ -89,7 +118,7 @@ class AccelGyroSensor(_Base):
         '''
         if self.accel_cali_temp is None:
             self.calibrate_accel_prepare()
-        accel_data = list(self.read_accel(raw=True))
+        accel_data = list(self.read_raw_accel())
         self.accel_cali_temp.append(accel_data)
         return accel_data
 
@@ -107,15 +136,18 @@ class AccelGyroSensor(_Base):
         accel_max = list(map(max, *self.accel_cali_temp))
         accel_min = list(map(min, *self.accel_cali_temp))
         # Calculate offset
-        self.acc_offset = [(accel_max[i] + accel_min[i]) / 2 for i in range(3)]
-        self.acc_scale = [accel_max[i] - accel_min[i] / 2 for i in range(3)]
+        self.acc_offset = list(map(lambda x, y: (x + y) / 2, accel_max, accel_min))
+        self.acc_scale = list(map(lambda x, y: 2 / (x - y), accel_max, accel_min))
         # Round to 2 decimal places
         self.acc_offset = [round(v, 2) for v in self.acc_offset]
         self.acc_scale = [round(v, 2) for v in self.acc_scale]
 
         return self.acc_offset, self.acc_scale, accel_max, accel_min
 
-    def set_calibration_data(self, acc_offset: list=[0, 0, 0], acc_scale: list=[1.0, 1.0, 1.0], gyro_offset: list=[0, 0, 0]) -> None:
+    def set_calibration_data(self,
+            acc_offset: Optional[list]=None,
+            acc_scale: Optional[list]=None,
+            gyro_offset: Optional[list]=None) -> None:
         ''' Set calibration data
         
         Args:
@@ -123,9 +155,12 @@ class AccelGyroSensor(_Base):
             acc_scale (list, optional): Acceleration scale. Defaults to [1.0, 1.0, 1.0].
             gyro_offset (list, optional): Gyroscope offset. Defaults to [0, 0, 0].
         '''
-        self.acc_offset = acc_offset
-        self.acc_scale = acc_scale
-        self.gyro_offset = gyro_offset
+        if acc_offset is not None:
+            acc_offset = acc_offset
+        if acc_scale is not None:
+            acc_scale = acc_scale
+        if gyro_offset is not None:
+            gyro_offset = gyro_offset
 
     def set_accel_offset(self, offset_list:list) -> None:
         ''' Set acceleration offset

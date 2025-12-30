@@ -470,8 +470,8 @@ class SH3001(AccelGyroSensor):
 
         self.i2c.write_byte_data(self.REG_TEMP_CONF0, conf)
 
-    def read_temperature(self, data:Optional[list]=None) -> float:
-        ''' Read temperature
+    def read_raw_temperature(self, data:Optional[list]=None) -> float:
+        ''' Read raw temperature
         
         Returns:
             float: Temperature in Celsius
@@ -488,12 +488,11 @@ class SH3001(AccelGyroSensor):
 
         return temperature
 
-    def read_accel(self, data:Optional[list]=None, raw:Optional[bool]=False) -> tuple:
-        ''' Read acceleration
+    def read_raw_accel(self, data:Optional[list]=None) -> tuple:
+        ''' Read raw acceleration
         
         Args:
             data (Optional[list], optional): Acceleration data. Defaults to None. provide data to skip reading
-            raw (Optional[bool], optional): Raw data. Defaults to False.
 
         Returns:
             tuple: Acceleration data
@@ -505,23 +504,14 @@ class SH3001(AccelGyroSensor):
         values = struct.unpack_from('hhh', data, 0)
         # Convert acceleration data to g
         values = [mapping(v, -0x8000, 0x7FFF, -self.accel_range, self.accel_range) for v in values]
-        if not raw:
-            # apply offset
-            values = [v - self.acc_offset[i] for i, v in enumerate(values)]
-            # apply scale
-            values = [v / self.acc_scale[i] for i, v in enumerate(values)]
-
-        # round to 2 decimal places
-        values = [round(v, 2) for v in values]
 
         return tuple(values)
 
-    def read_gyro(self, data:Optional[list]=None, raw:Optional[bool]=False) -> tuple:
-        ''' Read gyroscope
+    def read_raw_gyro(self, data:Optional[list]=None) -> tuple:
+        ''' Read raw gyroscope
         
         Args:
             data (Optional[list], optional): Gyroscope data. Defaults to None. provide data to skip reading
-            raw (Optional[bool], optional): Raw data. Defaults to False.
 
         Returns:
             tuple: Gyroscope data
@@ -533,23 +523,17 @@ class SH3001(AccelGyroSensor):
         values = struct.unpack_from('hhh', data, 0)
         # Convert gyroscope data to dps
         values = [mapping(v, -0x8000, 0x7FFF, -self.gyro_range[i], self.gyro_range[i]) for i, v in enumerate(values)]
-        if not raw:
-            # apply offset
-            values = [v - self.gyro_offset[i] for i, v in enumerate(values)]
-
-        # round to 2 decimal places
-        values = [round(v, 2) for v in values]
 
         return tuple(values)
 
-    def read(self) -> tuple:
-        ''' Read all data
+    def read_raw(self) -> tuple:
+        ''' Read all raw data
         
         Returns:
             tuple: Acceleration data, Gyroscope data, Temperature
         '''
         data = self.i2c.read_i2c_block_data(self.REG_ACC_X, 14)
-        self.accel_x, self.accel_y, self.accel_z = self.read_accel(data[:6])
-        self.gyro_x, self.gyro_y, self.gyro_z = self.read_gyro(data[6:12])
-        self.temperature = self.read_temperature(data[12:])
-        return (self.accel_x, self.accel_y, self.accel_z), (self.gyro_x, self.gyro_y, self.gyro_z), self.temperature
+        accel_data = self.read_raw_accel(data[:6])
+        gyro_data = self.read_raw_gyro(data[6:12])
+        temperature = self.read_raw_temperature(data[12:])
+        return accel_data, gyro_data, temperature
