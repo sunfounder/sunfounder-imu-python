@@ -7,6 +7,7 @@ Quick Links:
 - [SunFounder IMU](#sunfounder-imu)
   - [About SunFounder IMU](#about-sunfounder-imu)
   - [Installation](#installation)
+  - [Usage](#usage)
   - [Create docs](#create-docs)
   - [Debug record](#debug-record)
   - [About SunFounder](#about-sunfounder)
@@ -21,7 +22,7 @@ SunFounder IMU is a python library for Raspberry Pi. It provides a simple interf
 Install SunFounder IMU directly from GitHub repository.
 
 ```bash
-sudo pip install --break git+https://github.com/sunfounder/sunfounder-imu-python.git
+pip install git+https://github.com/sunfounder/sunfounder-imu-python.git
 ```
 
 Or clone the repository and install it.
@@ -29,7 +30,32 @@ Or clone the repository and install it.
 ```bash
 git clone https://github.com/sunfounder/sunfounder-imu-python.git
 cd sunfounder-imu-python
-sudo pip install --break .
+pip install .
+```
+
+You may need to install with `--break-system-packages`
+
+```bash
+pip install git+https://github.com/sunfounder/sunfounder-imu-python.git --break-system-packages
+# Or
+pip install . --break-system-packages
+```
+
+Or install it under virtual environment.
+```bash
+python3 -m venv venv
+source venv/bin/activate
+pip install git+https://github.com/sunfounder/sunfounder-imu-python.git
+# Or
+pip install .
+```
+
+## Usage
+
+You will need to calibrate the sensor before using it.
+
+```bash
+python3 -m sunfounder_imu.calibrate
 ```
 
 ## Create docs
