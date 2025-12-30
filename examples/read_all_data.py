@@ -15,16 +15,6 @@ from sunfounder_imu import IMU
 
 def main():
     imu = IMU()
-    if imu.baro is None:
-        print("[warn] No barometer sensor found.")
-        return
-    if imu.accel_gyro is None:
-        print("[warn] No accelerometer-gyroscope sensor found.")
-        return
-    if imu.mag is None:
-        print("[warn] No magnetometer sensor found.")
-        return
-    sleep(3)
     
     try:
         while True:
