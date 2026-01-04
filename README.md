@@ -80,11 +80,10 @@ sphinx-apidoc -f -d 1 -e -M -P -T -o source/api ../sunfounder_imu
 ## Debug record
 
 ```bash
-sudo pip uninstall --break sunfounder-imu -y && sudo pip install --break git+https://github.com/sunfounder/sunfounder-imu-python.git
-sudo pip uninstall --break sunfounder-imu -y && sudo pip install --break ~/sunfounder-imu-python/ --break-system-packages --no-deps --no-build-isolation
-sudo pip install ~/sunfounder-imu-python/ --break-system-packages --no-deps --no-build-isolation
-sudo python3 ~/sunfounder-imu-python/examples/read_all_data.py
-sudo python3 ~/sunfounder-imu-python/examples/calibrate.py
+pip uninstall --break sunfounder-imu -y && pip install --break git+https://github.com/sunfounder/sunfounder-imu-python.git
+pip uninstall --break sunfounder-imu -y && pip install --break ~/sunfounder-imu-python/ --break-system-packages --no-deps --no-build-isolation
+pip install ~/sunfounder-imu-python/ --break-system-packages --no-deps --no-build-isolation
+python3 ~/sunfounder-imu-python/examples/read_all_data.py
 ```
 
 ## About SunFounder

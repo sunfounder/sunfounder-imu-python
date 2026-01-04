@@ -1,6 +1,8 @@
 from sunfounder_imu.imu import IMU
 import time
-import threading
+import numpy as np
+
+from ._utils import format_3d_data
 
 imu = IMU()
 
@@ -32,63 +34,33 @@ def progress_bar(current: int, total: int, msg: str="Progress: ", bar_length: in
     progress_bar = f"{PROGRESS_BAR_START_CHARACTER}{fill_color}{PROGRESS_BAR_FILL_CHARACTER * fill_length}{restore_color}{PROGRESS_BAR_EMPTY_CHARACTER * empty_length}{PROGRESS_BAR_END_CHARACTER}{COLOR_STYLE_RESET}"
     print(f"{msg}{progress_bar} {int(percent*100)}%", end="\r")
 
-def calibrate_gyro():
-    """ Calibrate the gyroscope.
-    """
-    TIMES = 500
-    imu.calibrate_gyro_prepare()
-    for i in range(TIMES):
-        x, y, z = imu.calibrate_gyro_step()
-        progress_bar(i, TIMES, msg=f"Calibrating gyroscope({x:8.2f}, {y:8.2f}, {z:8.2f})  ")
-        time.sleep(0.01)
-    gyro_offsets = imu.calibrate_gyro_finish()
-    print("")
-    return gyro_offsets
-
-def calibrate_accel_mag():
-    """ Calibrate the accelerometer.
-    """
-
-    key_pressed = False
-    def key_press_thread():
-        nonlocal key_pressed
-        input("Press any key to stop calibration.")
-        key_pressed = True
-    thread = threading.Thread(target=key_press_thread)
-    thread.start()
-
-    imu.calibrate_accel_prepare()
-    imu.calibrate_mag_prepare()
-    while not key_pressed:
-        accel_x, accel_y, accel_z = imu.calibrate_accel_step()
-        mag_x, mag_y, mag_z = imu.calibrate_mag_step()
-        print(f"\033[KAcceleration: ({accel_x:5.2f}, {accel_y:5.2f}, {accel_z:5.2f}), Magnetometer: ({mag_x:6.2f}, {mag_y:6.2f}, {mag_z:6.2f})", end="\r")
-        time.sleep(0.01)
-    accel_offsets, accel_max, accel_min = imu.calibrate_accel_finish()
-    mag_offsets, mag_scales = imu.calibrate_mag_finish()
-
-    return accel_offsets, accel_max, accel_min, mag_offsets, mag_scales
-
 def main():
     print("\nCalibration\n")
-    print("Calibrate gyroscope")
-    print("Set the device down and DO NOT move it until the calibration is complete.")
-    input("\nWhen you are ready, press ENTER to continue.")
-    gyro_offsets = calibrate_gyro()
-    print(f"Gyroscope offsets: {gyro_offsets}")
-    print("Gyroscope calibration complete. data saved.")
+    FACES = [
+        "Z face up  ",
+        "Z face down",
+        "X face up  ",
+        "X face down",
+        "Y face up  ",
+        "Y face down",
+    ]
 
-    print("\n\nCalibrate accelerometer and magnetometer")
-    print(f"SLOWLY spin the device in all axis and directions.")
-    input("\nWhen you are ready, press ENTER to continue.")
-    print("Calibrating accelerometer and magnetometer... press ENTER when done.")
-    accel_offsets, accel_max, accel_min, mag_offsets, mag_scales = calibrate_accel_mag()
-    print(f"Accelerometer offsets: {accel_offsets}")
-    print(f"Accelerometer max: {accel_max}")
-    print(f"Accelerometer min: {accel_min}")
-    print(f"Magnetometer offsets: {mag_offsets}")
-    print(f"Magnetometer scales: {mag_scales}")
-    print("Accelerometer calibration complete. data saved.")
+    TIMES = 50
+
+    imu.calibrate_prepare()
+
+    for face in FACES:
+        print("\n\n=================")
+        print(f"*  {face}  *")
+        print("=================")
+        print(f"Set the device down flat {face}, and DO NOT move it until this process is complete.")
+        input("\nWhen you are ready, press ENTER to continue.")
+        for i in range(TIMES):
+            imu.calibrate_read()
+            progress_bar(i+1, TIMES, msg="Reading data ")
+            time.sleep(0.01)
+        imu.calibrate_step()
+    imu.calibrate_finish()
 
     print(f"\nCalibration complete. data saved to {imu.config_file}: ")
     with open(imu.config_file, 'r') as f:

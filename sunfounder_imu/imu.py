@@ -44,17 +44,19 @@ class IMU(_Base):
         # Setup accel_gyro sensor
         self.accel_gyro = get_accel_gyro_sensor(addresses)
         if self.accel_gyro is not None:
-            accel_offset = self.config.get(f"accel_offset", default=[0, 0, 0])
-            gyro_offset = self.config.get(f"gyro_offset", default=[0, 0, 0])
-            self.accel_gyro.set_calibration_data(accel_offset, gyro_offset)
+            accel_bias = self.config.get(f"accel_bias", default=None)
+            accel_scale = self.config.get(f"accel_scale", default=None)
+            gyro_bias = self.config.get(f"gyro_bias", default=None)
+            gyro_scale = self.config.get(f"gyro_scale", default=None)
+            self.accel_gyro.set_calibration_data(accel_bias, accel_scale, gyro_bias, gyro_scale)
         else:
             self.log.warning("No accelerometer-gyroscope sensor found.")
         
         # Setup magnetometer sensor
         if self.mag is not None:
-            mag_offset = self.config.get(f"mag_offset", default=[0, 0, 0])
-            mag_scale = self.config.get(f"mag_scale", default=[1.0, 1.0, 1.0])
-            self.mag.set_calibration_data(mag_offset, mag_scale)
+            mag_bias = self.config.get(f"mag_bias", default=None)
+            mag_scale = self.config.get(f"mag_scale", default=None)
+            self.mag.set_calibration_data(mag_bias, mag_scale)
         else:
             self.log.warning("No magnetometer sensor found.")
 
@@ -194,48 +196,31 @@ class IMU(_Base):
         data["yaw"] = yaw
         return data
 
-    def calibrate_accel_prepare(self) -> None:
-        """Calibrate the accelerometer, prepare calibration data."""
-        self.accel_gyro.calibrate_accel_prepare()
-    
-    def calibrate_accel_step(self) -> list:
-        """Calibrate the accelerometer, return current calibration data."""
-        return self.accel_gyro.calibrate_accel_step()
-
-    def calibrate_accel_finish(self) -> list:
-        """Calibrate the accelerometer, return current calibration data."""
-        acc_offset, acc_max, acc_min = self.accel_gyro.calibrate_accel_finish()
-        self.accel_gyro.set_accel_offset(acc_offset)
-        self.config.set(f"accel_offset", acc_offset)
-        return acc_offset, acc_max, acc_min
-
-    def calibrate_gyro_prepare(self) -> None:
-        """Calibrate the gyroscope, prepare calibration data."""
-        self.accel_gyro.calibrate_gyro_prepare()
-    
-    def calibrate_gyro_step(self) -> list:
-        """Calibrate the gyroscope, return current calibration data."""
-        return self.accel_gyro.calibrate_gyro_step()
-
-    def calibrate_gyro_finish(self) -> list:
-        """Calibrate the gyroscope, return current calibration data."""
-        gyro_offset = self.accel_gyro.calibrate_gyro_finish()
-        self.accel_gyro.set_gyro_offset(gyro_offset)
-        self.config.set(f"gyro_offset", gyro_offset)
-        return gyro_offset
-
-    def calibrate_mag_prepare(self) -> None:
-        """Calibrate the magnetometer, prepare calibration data."""
+    def calibrate_prepare(self) -> None:
+        """Calibrate the IMU, prepare calibration data."""
+        self.accel_gyro.calibrate_prepare()
         self.mag.calibrate_prepare()
-    
-    def calibrate_mag_step(self) -> list:
-        """Calibrate the magnetometer, return current calibration data."""
-        return self.mag.calibrate_step()
 
-    def calibrate_mag_finish(self) -> list:
-        """Calibrate the magnetometer, return current calibration data."""
-        mag_offset, mag_scale = self.mag.calibrate_finish()
-        self.mag.set_calibration_data(mag_offset, mag_scale)
-        self.config.set(f"mag_offset", mag_offset)
+    def calibrate_read(self) -> None:
+        """Calibrate IMU, read raw data."""
+        accel_data, gyro_data = self.accel_gyro.calibrate_read()
+        mag_data = self.mag.calibrate_read()
+        return accel_data, gyro_data, mag_data
+    
+    def calibrate_step(self) -> None:
+        """Calibrate IMU, step calibration."""
+        accel_mean, gyro_mean = self.accel_gyro.calibrate_step()
+        mag_mean = self.mag.calibrate_step()
+        return accel_mean, gyro_mean, mag_mean
+
+    def calibrate_finish(self) -> list:
+        """Calibrate IMU, finish calibration."""
+        accel_bias, accel_scale, gyro_bias, gyro_scale = self.accel_gyro.calibrate_finish()
+        mag_bias, mag_scale = self.mag.calibrate_finish()
+        self.config.set(f"accel_bias", accel_bias)
+        self.config.set(f"accel_scale", accel_scale)
+        self.config.set(f"gyro_bias", gyro_bias)
+        self.config.set(f"gyro_scale", gyro_scale)
+        self.config.set(f"mag_bias", mag_bias)
         self.config.set(f"mag_scale", mag_scale)
-        return mag_offset, mag_scale
+        return accel_bias, accel_scale, gyro_bias, gyro_scale, mag_bias, mag_scale

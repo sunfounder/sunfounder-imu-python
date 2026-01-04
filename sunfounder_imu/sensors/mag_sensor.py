@@ -1,7 +1,10 @@
 
 import math
 from typing import Optional
+
 from .._base import _Base
+from .._utils import remove_outliers_3d_and_mean
+from .linear_calibrator import LinearCalibrator, DEFAULT_BIAS, DEFAULT_SCALE
 
 class MagSensor(_Base):
     """
@@ -9,24 +12,28 @@ class MagSensor(_Base):
 
     Args:
         address (int): I2C address of the mag sensor.
+        bias (list, optional): initial bias. Defaults to None.
+        scale (list, optional): initial scale. Defaults to None.
     """
-    def __init__(self, address: int, *args, offset: Optional[list[float]]=[0.0, 0.0, 0.0], scale: Optional[list[float]]=[1.0, 1.0, 1.0], **kwargs):
+    def __init__(self,
+            address: int,
+            *args,
+            bias: Optional[list[float]]=DEFAULT_BIAS,
+            scale: Optional[list[float]]=DEFAULT_SCALE,
+            **kwargs):
         super().__init__(address, *args, **kwargs)
         self.address = address
 
-        self.azimuth = None
-        self.calibrate_data_temp = None
-        self.offsets = offset
-        self.scales = scale
+        self.calibrator = LinearCalibrator(bias=bias, scale=scale)
+
+        self.mag_cali_means = None
+        self.mag_cali_raw = None
 
     def read_raw_mag(self) -> tuple[float, float, float]:
         raise NotImplementedError("read_raw method not implemented")
 
-    def read_magnetometer(self, raw: bool=False) -> tuple[float, float, float]:
+    def read_magnetometer(self) -> tuple[float, float, float]:
         ''' Get the magnetometer data.
-
-        Args:
-            raw (bool, optional): Whether to return the raw magnetometer data. Defaults to False.
 
         Returns:
             tuple[float, float, float]: Magnetometer data in gauss.
@@ -71,43 +78,49 @@ class MagSensor(_Base):
         '''
         mag_data = self.read_magnetometer()
         
-        # apply offset
-        mag_data = [v - self.offsets[i] for i, v in enumerate(mag_data)]
-        # apply scale
-        mag_data = [v * self.scales[i] for i, v in enumerate(mag_data)]
+        mag_data = self.calibrator.calibrate(mag_data)
         # round to 3 decimal places
         mag_data = [round(v, 3) for v in mag_data]
 
         azimuth = self.read_azimuth(data=mag_data)
         return mag_data, azimuth
 
-    def set_calibration_data(self, offsets: list[float], scales: list[float]) -> None:
-        ''' Set the calibration offset and scale.
+    def set_calibration_data(self, bias: Optional[list[float]]=None, scale: Optional[list[float]]=None) -> None:
+        ''' Set the calibration bias and scale.
 
         Args:
-            offsets (list[float]): Offsets.
-            scales (list[float]): Scales.
+            bias (Optional[list[float]], optional): Bias. Defaults to None.
+            scale (Optional[list[float]], optional): Scale. Defaults to None.
         '''
-        self.offsets = offsets
-        self.scales = scales
+        if bias is not None:
+            self.calibrator.set_bias(bias)
+        if scale is not None:
+            self.calibrator.set_scale(scale)
 
     def calibrate_prepare(self) -> None:
         ''' Prepare the device for calibration.
         '''
-        self.calibrate_data_temp = []
+        self.mag_cali_raw = []
+        self.mag_cali_means = []
 
-    def calibrate_step(self, data: Optional[tuple[float, float, float]]=None) -> None:
-        ''' Add the magnetometer data to the calibration data.
-
-        Args:
-            data (Optional[tuple[float, float, float]], optional): Magnetometer data in gauss. Defaults to None.
+    def calibrate_read(self) -> None:
+        ''' Read the magnetometer data and add it to the calibration data.
         '''
-        if self.calibrate_data_temp is None:
-            self.calibrate_data_temp = []
-        if data is None:
-            data = list(self.read_magnetometer(raw=True))
-        self.calibrate_data_temp.append(data)
+        if self.mag_cali_raw is None:
+            self.calibrate_prepare()
+        data = list(self.read_magnetometer())
+        self.mag_cali_raw.append(data)
         return data
+
+    def calibrate_step(self) -> None:
+        ''' Add the magnetometer data to the calibration data.
+        '''
+        if self.mag_cali_raw is None:
+            raise ValueError("No calibration data. Please call calibrate_prepare() first.")
+        meaned = remove_outliers_3d_and_mean(self.mag_cali_raw)
+        self.mag_cali_means.append(meaned)
+        self.mag_cali_raw = []
+        return meaned
 
     def calibrate_finish(self) -> None:
         ''' Finish the calibration and set the offset.
@@ -115,17 +128,8 @@ class MagSensor(_Base):
         Returns:
             tuple[list[float], list[float]]: Offsets and scales.
         '''
-        if not self.calibrate_data_temp:
+        if not self.mag_cali_means:
             raise ValueError("No calibration data. Please call calibrate_prepare() and calibrate_step() first.")
-        data_min = list(map(min, zip(*self.calibrate_data_temp)))
-        data_max = list(map(max, zip(*self.calibrate_data_temp)))
-        # Bottom calculation is from zeus-car
-        offsets = list(map(lambda x, y: (x + y) / 2, data_min, data_max))
-        scales = list(map(lambda x, y: 2 / (y - x), data_min, data_max))
-        avg_scale = sum(scales) / len(scales)
-        scales = list(map(lambda x: avg_scale / x, scales))
-
-        self.offsets = [round(offset, 2) for offset in offsets]
-        self.scales = [round(scale, 2) for scale in scales]
-
-        return self.offsets, self.scales
+        biases, scales = self.calibrator.fit(self.mag_cali_means)
+        self.set_calibration_data(biases, scales)
+        return biases, scales
