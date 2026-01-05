@@ -478,10 +478,8 @@ class SH3001(AccelGyroSensor):
         '''
         if data is None:
             data = self.i2c.read_i2c_block_data(self.REG_TEMP_DATA, 2)
-        print(f"data: {data}")
         data = bytes(data)
         data = struct.unpack_from('!h', data, 0)[0]
-        print(f"raw temp: {data}")
         # Both temperature readings and room temperature are 12-bit unsigned values
         data = data & 0x0FFF
         temperature = (data - self.ROOM_TEMP) / 16.0 + 25.0

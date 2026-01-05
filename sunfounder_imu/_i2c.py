@@ -297,7 +297,6 @@ class I2C(_Base):
         elif len(data_all) == 3:
             reg = data_all[0]
             data = (data_all[2] << 8) + data_all[1]
-            print(f"I2C write_word_data 0x{reg:02X} data: 0x{data:04X}")
             self.write_word_data(reg, data)
         else:
             reg = data_all[0]
