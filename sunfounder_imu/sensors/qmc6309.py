@@ -91,7 +91,6 @@ class QMC6309(MagSensor):
 
         self.i2c = I2C(address=address, log_level=self.log_level)
         self.range = None
-        self.last_data = None
 
         self.init(
             set_reset_mode=self.SET_RESET_ON,
@@ -264,9 +263,7 @@ class QMC6309(MagSensor):
         '''
         # if not self.is_data_ready():
         #     self.logger.warning("Data not ready, using last data")
-        #     return self.last_data
         data = [self.i2c.read_word_data(reg) for reg in self.DATA_REGS]
         data = [twos_complement(d, 16) for d in data]
         data = [mapping(d, -32768, 32767, -self.range, self.range) for d in data]
-        self.last_data = data
         return tuple(data)
