@@ -7,8 +7,12 @@ from .accel_gyro_sensor import AccelGyroSensor
 from .mag_sensor import MagSensor
 
 from .spl06_001 import SPL06_001
+
 from .qmc6310 import QMC6310
+from .qmc6309 import QMC6309
+
 from .sh3001 import SH3001
+from .qmi8658b import QMI8658B
 
 BAROS = {
     "SPL06_001": SPL06_001,
@@ -26,11 +30,14 @@ BAROMETER_ADDRESS_MAP = {
 MAGNETOMETER_ADDRESS_MAP = {
     0x1C: QMC6310,
     0x3C: QMC6310,
+    0x7C: QMC6309,
 }
 
 ACCEL_GYRO_ADDRESS_MAP = {
     0x36: SH3001,
     0x37: SH3001,
+    0x6A: QMI8658B,
+    0x6B: QMI8658B,
 }
 
 def get_baro_sensor(addresses: Optional[list]=None) -> BaroSensor:
@@ -42,7 +49,7 @@ def get_baro_sensor(addresses: Optional[list]=None) -> BaroSensor:
     Returns:
         BaroSensor: Barometer sensor object
     """
-    addresses = addresses or I2C.scan()
+    addresses = addresses or I2C.scan(all=True)
     sensor = None
 
     for address in addresses:
@@ -60,7 +67,7 @@ def get_accel_gyro_sensor(addresses: Optional[list]=None) -> AccelGyroSensor:
     Returns:
         AccelGyroSensor: Accelerometer-gyroscope sensor object
     """
-    addresses = addresses or I2C.scan()
+    addresses = addresses or I2C.scan(all=True)
     sensor = None
 
     for address in addresses:
@@ -78,7 +85,7 @@ def get_mag_sensor(addresses: Optional[list]=None) -> MagSensor:
     Returns:
         MagSensor: Magnetometer sensor object
     """
-    addresses = addresses or I2C.scan()
+    addresses = addresses or I2C.scan(all=True)
     sensor = None
 
     for address in addresses:

@@ -3,15 +3,16 @@ import numpy as np
 import math
 from ._config import Config
 from ._base import _Base
-import os
 
 from ._i2c import I2C
 from .sensors import get_baro_sensor, get_accel_gyro_sensor, get_mag_sensor
-
-USER_HOME = os.path.expanduser("~")
+from .constants import DEFAULT_CONFIG_FILE
 
 class IMU(_Base):
-    DEFAULT_CONFIG_FILE = os.path.join(USER_HOME, ".config", "sunfounder-imu-config.json")
+
+    ACCEL_RANGES = None
+    GYRO_RANGES = None
+    MAG_RANGES = None
 
     def __init__(self,
             *args,
@@ -37,17 +38,18 @@ class IMU(_Base):
         self.q = np.array([1.0, 0.0, 0.0, 0.0])  # w, x, y, z
         self.integral_error = np.array([0.0, 0.0, 0.0])
 
-        addresses = I2C.scan()
+        addresses = I2C.scan(all=True)
+        self.accel_gyro = get_accel_gyro_sensor(addresses)
         self.mag = get_mag_sensor(addresses)
         self.baro = get_baro_sensor(addresses)
     
-        # Setup accel_gyro sensor
-        self.accel_gyro = get_accel_gyro_sensor(addresses)
         if self.accel_gyro is not None:
             accel_bias = self.config.get(f"accel_bias", default=None)
             accel_scale = self.config.get(f"accel_scale", default=None)
             gyro_bias = self.config.get(f"gyro_bias", default=None)
             gyro_scale = self.config.get(f"gyro_scale", default=None)
+            self.ACCEL_RANGES = self.accel_gyro.ACCEL_RANGES
+            self.GYRO_RANGES = self.accel_gyro.GYRO_RANGES
             self.accel_gyro.set_calibration_data(accel_bias, accel_scale, gyro_bias, gyro_scale)
         else:
             self.log.warning("No accelerometer-gyroscope sensor found.")
@@ -56,6 +58,7 @@ class IMU(_Base):
         if self.mag is not None:
             mag_bias = self.config.get(f"mag_bias", default=None)
             mag_scale = self.config.get(f"mag_scale", default=None)
+            self.MAG_RANGES = self.mag.MAG_RANGES
             self.mag.set_calibration_data(mag_bias, mag_scale)
         else:
             self.log.warning("No magnetometer sensor found.")
@@ -70,6 +73,33 @@ class IMU(_Base):
 
         if self.accel_gyro is None and self.mag is None and self.baro is None:
             raise ValueError("No sensor found.")
+
+    def set_accel_range(self, range: int):
+        """ Set accelerometer range
+
+        Args:
+            range (int): Accelerometer range
+        """
+        if self.accel_gyro is not None:
+            self.accel_gyro.set_accel_range(range)
+    
+    def set_gyro_range(self, range: int):
+        """ Set gyroscope range
+
+        Args:
+            range (int): Gyroscope range
+        """
+        if self.accel_gyro is not None:
+            self.accel_gyro.set_gyro_range(range)
+
+    def set_mag_range(self, range: int):
+        """ Set magnetometer range
+
+        Args:
+            range (int): Magnetometer range
+        """
+        if self.mag is not None:
+            self.mag.set_range(range)
 
     def read_raw(self):
         """ Get all measurements in one call
@@ -186,14 +216,15 @@ class IMU(_Base):
     def read(self) -> dict:
         """Read all sensor data and update attitude"""
         data = self.read_raw()
-        roll, pitch, yaw = self.get_euler_angles(
-            [data["accel_x"], data["accel_y"], data["accel_z"]],
-            [data["gyro_x"], data["gyro_y"], data["gyro_z"]],
-            [data["mag_x"], data["mag_y"], data["mag_z"]]
-        )
-        data["roll"] = roll
-        data["pitch"] = pitch
-        data["yaw"] = yaw
+        if self.accel_gyro is not None and self.mag is not None:
+            roll, pitch, yaw = self.get_euler_angles(
+                [data["accel_x"], data["accel_y"], data["accel_z"]],
+                [data["gyro_x"], data["gyro_y"], data["gyro_z"]],
+                [data["mag_x"], data["mag_y"], data["mag_z"]]
+            )
+            data["roll"] = roll
+            data["pitch"] = pitch
+            data["yaw"] = yaw
         return data
 
     def calibrate_prepare(self) -> None:

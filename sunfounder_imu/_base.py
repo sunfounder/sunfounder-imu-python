@@ -1,5 +1,6 @@
 import logging
 from ._logger import Logger
+from typing import Optional
 
 class _Base:
     """ Base class for Fusion Hat
@@ -14,9 +15,9 @@ class _Base:
         config_file (str, optional): Config file path, default is None
     """
     def __init__(self, *args,
-            log: logging.Logger = Logger(__name__),
+            log: Optional[logging.Logger] = None,
             log_level: [int, str] = logging.INFO,
             **kwargs):
 
-        self.log = log
+        self.log = log if log is not None else Logger(self.__class__.__name__)
         self.log.setLevel(log_level)

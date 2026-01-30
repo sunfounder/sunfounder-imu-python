@@ -15,6 +15,9 @@ class MagSensor(_Base):
         bias (list, optional): initial bias. Defaults to None.
         scale (list, optional): initial scale. Defaults to None.
     """
+
+    MAG_RANGES = None
+
     def __init__(self,
             address: int,
             *args,
@@ -28,6 +31,14 @@ class MagSensor(_Base):
 
         self.mag_cali_means = None
         self.mag_cali_raw = None
+
+    def set_mag_range(self, range: int) -> None:
+        ''' Set the magnetometer range.
+
+        Args:
+            range (int): Magnetometer range in gauss.
+        '''
+        raise NotImplementedError("set_mag_range method not implemented")
 
     def read_raw_mag(self) -> tuple[float, float, float]:
         raise NotImplementedError("read_raw method not implemented")

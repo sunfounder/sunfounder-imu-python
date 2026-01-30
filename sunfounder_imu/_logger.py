@@ -27,6 +27,12 @@ class ColoredFormatter(logging.Formatter):
 
 class Logger(logging.Logger):
     """ Logger class """
+    INFO = logging.INFO
+    DEBUG = logging.DEBUG
+    WARNING = logging.WARNING
+    ERROR = logging.ERROR
+    CRITICAL = logging.CRITICAL
+
     def __init__(self, name='logger', level=logging.INFO, file:str=None, maxBytes=10*1024*1024, backupCount=10):
         """ Initialize Logger
 
@@ -43,7 +49,6 @@ class Logger(logging.Logger):
         # Create a handler, used for output to the console
         console_formatter = ColoredFormatter('[%(levelname)s] %(message)s')
         console_handler = logging.StreamHandler()
-        console_handler.setLevel(level)
         console_handler.setFormatter(console_formatter)
         self.addHandler(console_handler)
 
@@ -51,9 +56,10 @@ class Logger(logging.Logger):
             # Create a handler, used for output to a file
             file_formatter = logging.Formatter('%(asctime)s.%(msecs)03d [%(levelname)s] %(message)s', datefmt='%y/%m/%d %H:%M:%S')
             file_handler = RotatingFileHandler(self.log_path, maxBytes=maxBytes, backupCount=backupCount)
-            file_handler.setLevel(level)
             file_handler.setFormatter(file_formatter)
             self.addHandler(file_handler)
+        
+        self.setLevel(level)
 
     def setLevel(self, level: [int, str]):
         """ Set log level
@@ -66,3 +72,4 @@ class Logger(logging.Logger):
         super().setLevel(level)
         for handler in self.handlers:
             handler.setLevel(level)
+        

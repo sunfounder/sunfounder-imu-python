@@ -19,6 +19,9 @@ class AccelGyroSensor(_Base):
     
     G = 9.80665
 
+    ACCEL_RANGES = None
+    GYRO_RANGES = None
+
     def __init__(self,
             address: int,
             *args,
@@ -38,6 +41,21 @@ class AccelGyroSensor(_Base):
         self.gyro_cali_means = None
         self.gyro_cali_raw = None
         
+    def set_accel_range(self, range: int) -> None:
+        ''' Set the accelerometer range.
+
+        Args:
+            range (int): Accelerometer range in g.
+        '''
+        raise NotImplementedError("set_accel_range method not implemented")
+
+    def set_gyro_range(self, range: int) -> None:
+        ''' Set the gyroscope range.
+
+        Args:
+            range (int): Gyroscope range in dps.
+        '''
+        raise NotImplementedError("set_gyro_range method not implemented")
 
     def read_raw(self) -> [float]:
         raise NotImplementedError("_read method not implemented")

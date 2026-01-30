@@ -1,2 +1,2 @@
-__version__ = "1.0.0.a5"
+__version__ = "1.1.0A1"
 """ SunFounder IMU version """

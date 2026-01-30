@@ -52,10 +52,16 @@ pip install .
 
 ## Usage
 
+You can scan the module, and check the connection of the sensor.
+
+```bash
+sunfounder-imu scan
+```
+
 You will need to calibrate the sensor before using it.
 
 ```bash
-python3 -m sunfounder_imu.calibrate
+sunfounder-imu calibrate
 ```
 
 ## Create docs
@@ -80,9 +86,8 @@ sphinx-apidoc -f -d 1 -e -M -P -T -o source/api ../sunfounder_imu
 ## Debug record
 
 ```bash
-pip uninstall --break sunfounder-imu -y && pip install --break git+https://github.com/sunfounder/sunfounder-imu-python.git
 pip uninstall --break sunfounder-imu -y && pip install --break ~/sunfounder-imu-python/ --break-system-packages --no-deps --no-build-isolation
-pip install ~/sunfounder-imu-python/ --break-system-packages --no-deps --no-build-isolation
+
 python3 ~/sunfounder-imu-python/examples/read_all_data.py
 ```
 

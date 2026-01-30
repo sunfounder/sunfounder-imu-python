@@ -7,7 +7,9 @@ from .accel_gyro_sensor import AccelGyroSensor
 from .._i2c import I2C
 from .._utils import mapping
 
+
 class SH3001(AccelGyroSensor):
+
     I2C_ADDRESSES = [0x36, 0x37]
 
     # region: Macro Definitions
@@ -108,15 +110,6 @@ class SH3001(AccelGyroSensor):
     ACC_ODR_8000HZ = 0b1010
     ''' Accelerometer ODR 8000 Hz '''
 
-    ACC_RANGE_16G = 0b010
-    ''' Accelerometer range 16 g '''
-    ACC_RANGE_8G = 0b011
-    ''' Accelerometer range 8 g '''
-    ACC_RANGE_4G = 0b100
-    ''' Accelerometer range 4 g '''
-    ACC_RANGE_2G = 0b101
-    ''' Accelerometer range 2 g '''
-
     ACC_ODRX040 = 0b000
     ''' Accelerometer low pass filter cutout frequency ODR x 0.40 '''
     ACC_ODRX025 = 0b001
@@ -140,14 +133,6 @@ class SH3001(AccelGyroSensor):
     ]
     ''' Accelerometer ODR options '''
 
-    ACC_RANGE_OPTIONS = [
-        ACC_RANGE_2G,
-        ACC_RANGE_4G,
-        ACC_RANGE_8G,
-        ACC_RANGE_16G,
-    ]
-    ''' Accelerometer range options '''
-
     ACC_LOW_PASS_FILTER_OPTIONS = [
         ACC_ODRX040,
         ACC_ODRX025,
@@ -155,7 +140,6 @@ class SH3001(AccelGyroSensor):
         ACC_ODRX004,
     ]
     ''' Accelerometer low pass filter options '''
-
 
     GYRO_ODR_1000HZ = 0b0000
     ''' Gyroscope ODR 1000 Hz '''
@@ -180,17 +164,6 @@ class SH3001(AccelGyroSensor):
     GYRO_ODR_32000HZ = 0b1100
     ''' Gyroscope ODR 32000 Hz '''
 
-    GYRO_RANGE_125 = 0x02
-    ''' Gyroscope range 125 dps '''
-    GYRO_RANGE_250 = 0x03
-    ''' Gyroscope range 250 dps '''
-    GYRO_RANGE_500 = 0x04
-    ''' Gyroscope range 500 dps '''
-    GYRO_RANGE_1000 = 0x05
-    ''' Gyroscope range 1000 dps '''
-    GYRO_RANGE_2000 = 0x06
-    ''' Gyroscope range 2000 dps '''
-
     GYRO_LPF_00 = 0b00
     ''' Gyroscope low pass filter cutout frequency see datasheet about Gyroscope digital LPF cut-off frequency configuration '''
     GYRO_LPF_01 = 0b01
@@ -214,24 +187,6 @@ class SH3001(AccelGyroSensor):
         GYRO_ODR_32000HZ,
     ]
     ''' Gyroscope ODR options '''
-
-    GYRO_RANGE_OPTIONS = [
-        GYRO_RANGE_125,
-        GYRO_RANGE_250,
-        GYRO_RANGE_500,
-        GYRO_RANGE_1000,
-        GYRO_RANGE_2000,
-    ]
-    ''' Gyroscope range options '''
-
-    GYRO_RANGE_MAP = {
-        GYRO_RANGE_125: 125,
-        GYRO_RANGE_250: 250,
-        GYRO_RANGE_500: 500,
-        GYRO_RANGE_1000: 1000,
-        GYRO_RANGE_2000: 2000,
-    }
-    ''' Gyroscope range map '''
 
     GYRO_LOW_PASS_FILTER_OPTIONS = [
         GYRO_LPF_00,
@@ -263,17 +218,46 @@ class SH3001(AccelGyroSensor):
     ACC_WORKMODE_NORMAL = 0x01
     ACC_WORKMODE_LOW_POWER = 0x02
 
-    ACC_RANGE_MAP = {
-        ACC_RANGE_2G: 2,
-        ACC_RANGE_4G: 4,
-        ACC_RANGE_8G: 8,
-        ACC_RANGE_16G: 16,
+    ACCEL_RANGE_16G = 0b010
+    ''' Accelerometer range 16 g '''
+    ACCEL_RANGE_8G = 0b011
+    ''' Accelerometer range 8 g '''
+    ACCEL_RANGE_4G = 0b100
+    ''' Accelerometer range 4 g '''
+    ACCEL_RANGE_2G = 0b101
+    ''' Accelerometer range 2 g '''
+
+    ACCEL_RANGES = {
+        ACCEL_RANGE_2G: 2,
+        ACCEL_RANGE_4G: 4,
+        ACCEL_RANGE_8G: 8,
+        ACCEL_RANGE_16G: 16,
     }
+
+    GYRO_RANGE_125DPS = 0x02
+    ''' Gyroscope range 125 dps '''
+    GYRO_RANGE_250DPS = 0x03
+    ''' Gyroscope range 250 dps '''
+    GYRO_RANGE_500DPS = 0x04
+    ''' Gyroscope range 500 dps '''
+    GYRO_RANGE_1000DPS = 0x05
+    ''' Gyroscope range 1000 dps '''
+    GYRO_RANGE_2000DPS = 0x06
+    ''' Gyroscope range 2000 dps '''
+
+    GYRO_RANGES = {
+        GYRO_RANGE_125DPS: 125,
+        GYRO_RANGE_250DPS: 250,
+        GYRO_RANGE_500DPS: 500,
+        GYRO_RANGE_1000DPS: 1000,
+        GYRO_RANGE_2000DPS: 2000,
+    }
+    ''' Gyroscope range map '''
 
     # init
     def __init__(self, *args, address=None, **kwargs):
         if address is None:
-            addresses = I2C.scan(search=self.I2C_ADDRESSES)
+            addresses = I2C.scan(search=I2C_ADDRESSES)
             if addresses:
                 address = addresses[0]
             else:
@@ -302,7 +286,7 @@ class SH3001(AccelGyroSensor):
             adc_dither_enable = False,
             filter_enable = True,
             odr = self.ACC_ODR_1000HZ,
-            range = self.ACC_RANGE_16G,
+            range = self.ACCEL_RANGE_16G,
             low_pass_filter_enable = False,
             low_pass_filter = self.ACC_ODRX011)
         self.set_gyroscope_configuration(
@@ -311,11 +295,11 @@ class SH3001(AccelGyroSensor):
             odr=self.GYRO_ODR_1000HZ,
             low_pass_filter_enable=False,
             low_pass_filter=self.GYRO_LPF_10,
-            range_x=self.GYRO_RANGE_2000,
-            range_y=self.GYRO_RANGE_2000,
-            range_z=self.GYRO_RANGE_2000)
+            range_x=self.GYRO_RANGE_2000DPS,
+            range_y=self.GYRO_RANGE_2000DPS,
+            range_z=self.GYRO_RANGE_2000DPS)
         self.set_temperature_configuration(enable=True, odr=self.TEMP_ODR_125)
-        self.ROOM_TEMP = self.i2c.read_word_data(self.REG_TEMP_CONF0) & 0x0FFF
+        self.room_temp = self.i2c.read_word_data(self.REG_TEMP_CONF0) & 0x0FFF
 
         return True
 
@@ -358,13 +342,13 @@ class SH3001(AccelGyroSensor):
             conf_1 &= 0b11110000
             conf_1 |= odr
             self.i2c.write_byte_data(self.REG_ACC_CONF1, conf_1)
-        if range is not None and range in self.ACC_RANGE_OPTIONS:
-            if range not in self.ACC_RANGE_OPTIONS:
-                raise ValueError(f'range not in {self.ACC_RANGE_OPTIONS}')
+        if range is not None and range in self.ACCEL_RANGES:
+            if range not in self.ACCEL_RANGES:
+                raise ValueError(f'range not in {self.ACCEL_RANGES}')
             conf_2 = self.i2c.read_byte_data(self.REG_ACC_CONF2)
             conf_2 &= 0b11111000
             conf_2 |= range
-            self.accel_range = self.ACC_RANGE_MAP[range]
+            self.accel_range = self.ACCEL_RANGES[range]
             self.i2c.write_byte_data(self.REG_ACC_CONF2, conf_2)
         if low_pass_filter_enable is not None or low_pass_filter is not None:
             conf_3 = self.i2c.read_byte_data(self.REG_ACC_CONF3)
@@ -427,28 +411,28 @@ class SH3001(AccelGyroSensor):
                 conf |= low_pass_filter << 2
             self.i2c.write_byte_data(self.REG_GYRO_CONF2, conf)
         if range_x is not None:
-            if range_x not in self.GYRO_RANGE_OPTIONS:
-                raise ValueError(f'range_x not in {self.GYRO_RANGE_OPTIONS}')
+            if range_x not in self.GYRO_RANGES:
+                raise ValueError(f'range_x not in {self.GYRO_RANGES}')
             conf = self.i2c.read_byte_data(self.REG_GYRO_CONF3)
             conf &= 0b11111000
             conf |= range_x
-            self.gyro_range[0] = self.GYRO_RANGE_MAP[range_x]
+            self.gyro_range[0] = self.GYRO_RANGES[range_x]
             self.i2c.write_byte_data(self.REG_GYRO_CONF3, conf)
         if range_y is not None:
-            if range_y not in self.GYRO_RANGE_OPTIONS:
-                raise ValueError(f'range_y not in {self.GYRO_RANGE_OPTIONS}')
+            if range_y not in self.GYRO_RANGES:
+                raise ValueError(f'range_y not in {self.GYRO_RANGES}')
             conf = self.i2c.read_byte_data(self.REG_GYRO_CONF4)
             conf &= 0b11111000
             conf |= range_y
-            self.gyro_range[1] = self.GYRO_RANGE_MAP[range_y]
+            self.gyro_range[1] = self.GYRO_RANGES[range_y]
             self.i2c.write_byte_data(self.REG_GYRO_CONF4, conf)
         if range_z is not None:
-            if range_z not in self.GYRO_RANGE_OPTIONS:
-                raise ValueError(f'range_z not in {self.GYRO_RANGE_OPTIONS}')
+            if range_z not in self.GYRO_RANGES:
+                raise ValueError(f'range_z not in {self.GYRO_RANGES}')
             conf = self.i2c.read_byte_data(self.REG_GYRO_CONF5)
             conf &= 0b11111000
             conf |= range_z
-            self.gyro_range[2] = self.GYRO_RANGE_MAP[range_z]
+            self.gyro_range[2] = self.GYRO_RANGES[range_z]
             self.i2c.write_byte_data(self.REG_GYRO_CONF5, conf)
         
     def set_temperature_configuration(self, enable:Optional[bool]=None, odr:Optional[bytes]=None) -> None:
@@ -470,6 +454,26 @@ class SH3001(AccelGyroSensor):
 
         self.i2c.write_byte_data(self.REG_TEMP_CONF0, conf)
 
+    def set_accel_range(self, range:int) -> None:
+        ''' Acceleration range
+        
+        Args:
+            range (int): Acceleration range
+        '''
+        if range not in self.ACCEL_RANGES:
+            raise ValueError(f'range not in {self.ACCEL_RANGES}')
+        self.set_acceleration_configuration(range=range)
+
+    def set_gyro_range(self, range:int) -> None:
+        ''' Gyroscope range
+        
+        Args:
+            range (int): Gyroscope range in dps
+        '''
+        if range not in self.GYRO_RANGES:
+            raise ValueError(f'range not in {self.GYRO_RANGES}')
+        self.set_gyroscope_configuration(range_x = range, range_y = range, range_z = range)
+
     def read_raw_temperature(self, data:Optional[list]=None) -> float:
         ''' Read raw temperature
         
@@ -482,7 +486,7 @@ class SH3001(AccelGyroSensor):
         data = struct.unpack_from('!h', data, 0)[0]
         # Both temperature readings and room temperature are 12-bit unsigned values
         data = data & 0x0FFF
-        temperature = (data - self.ROOM_TEMP) / 16.0 + 25.0
+        temperature = (data - self.room_temp) / 16.0 + 25.0
 
         return temperature
 

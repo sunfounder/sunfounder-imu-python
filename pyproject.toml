@@ -31,3 +31,6 @@ include = ["sunfounder_imu*"]
 
 [tool.setuptools.dynamic]
 version = {attr = "sunfounder_imu._version.__version__"}
+
+[project.scripts]
+sunfounder-imu = "sunfounder_imu.cli.__init__:main"
