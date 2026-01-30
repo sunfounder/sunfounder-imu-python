@@ -1,8 +1,5 @@
 from sunfounder_imu.imu import IMU
 import time
-import numpy as np
-
-from ._utils import format_3d_data
 
 imu = IMU()
 
