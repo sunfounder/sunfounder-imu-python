@@ -76,16 +76,22 @@ class QMC6309(MagSensor):
         RANGE_8_GAUSS: 8.0,
     }
 
-    def __init__(self, *args, address: Optional[int]=None, **kwargs):
+    def __init__(self, *args, address: Optional[int]=None, log_level: str="info", **kwargs):
+        self.log_level = log_level
         
         if address is None:
             addresses = I2C.scan(search=self.I2C_ADDRESSES, all=True)
             if addresses:
                 address = addresses[0]
+            else:
+                raise ValueError("QMC6309 not found")
         super().__init__(address, *args, **kwargs)
+        self.logger = Logger(self.__class__.__name__)
+        self.logger.setLevel(self.log_level)
 
-        self.i2c = I2C(address=address)
+        self.i2c = I2C(address=address, log_level=self.log_level)
         self.range = None
+        self.last_data = None
 
         self.init(
             set_reset_mode=self.SET_RESET_ON,
@@ -118,7 +124,7 @@ class QMC6309(MagSensor):
         self.range = self.RANGES[range]
         # Reset
         self.reset()
-        self.set_ctrl2(set_reset_mode=set_reset_mode, range=range, self_test=self.SELF_TEST_OFF)
+        self.set_ctrl2(set_reset_mode=set_reset_mode, odr=odr, range=range)
         self.set_ctrl1(mode=mode, osr1=osr1, osr2=osr2)
 
     def reset(self) -> None:
@@ -256,10 +262,11 @@ class QMC6309(MagSensor):
         Returns:
             tuple[float, float, float]: Magnetometer data in gauss.
         '''
-        if not self.is_data_ready():
-            self.logger.warning("Data not ready")
-            return None
+        # if not self.is_data_ready():
+        #     self.logger.warning("Data not ready, using last data")
+        #     return self.last_data
         data = [self.i2c.read_word_data(reg) for reg in self.DATA_REGS]
         data = [twos_complement(d, 16) for d in data]
         data = [mapping(d, -32768, 32767, -self.range, self.range) for d in data]
+        self.last_data = data
         return tuple(data)

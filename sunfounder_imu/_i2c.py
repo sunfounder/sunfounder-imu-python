@@ -58,7 +58,7 @@ Example:
 """
 
 #!/usr/bin/env python3
-from smbus2 import SMBus
+from smbus2 import SMBus, i2c_msg
 
 from ._utils import retry
 from ._base import _Base
@@ -116,7 +116,7 @@ class I2C(_Base):
         Returns:
             bool: True if the byte is written successfully, False otherwise
         """
-        self.log.debug(f"write_byte_data: 0x{reg:02x}({reg}), 0x{data:02x}({data})")
+        self.log.debug(f"write_byte_data:\n  address: 0x{self.address:02x}\n      reg: 0x{reg:02x}({reg})\n     data: 0x{data:02x}({data})")
         result = self._smbus.write_byte_data(self.address, reg, data)
         return result
 
@@ -260,8 +260,10 @@ class I2C(_Base):
         for addr in range(MIN, MAX + 1):
             try:
                 with SMBus(bus) as smbus:
-                    # Read a byte from the address
-                    smbus.read_byte(addr, force=force)
+                    # Write a empty byte to the address
+                    msg = i2c_msg.write(addr, [])
+                    smbus.i2c_rdwr(msg)
+                    # If no exception, the address is valid
                     if search is None or addr in search:
                         devices.append(addr)
             except OSError as expt:
