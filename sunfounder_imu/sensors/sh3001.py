@@ -257,7 +257,7 @@ class SH3001(AccelGyroSensor):
     # init
     def __init__(self, *args, address=None, **kwargs):
         if address is None:
-            addresses = I2C.scan(search=I2C_ADDRESSES)
+            addresses = I2C.scan(search=self.I2C_ADDRESSES)
             if addresses:
                 address = addresses[0]
             else:
