@@ -218,8 +218,11 @@ class QMI8658B(AccelGyroSensor):
 
         self.accel_range = self.ACCEL_RANGES[self.ACCEL_RANGE_2G]
         self.gyro_range = self.GYRO_RANGES[self.GYRO_RANGE_16DPS]
-
         self.i2c = I2C(address=address)
+
+        id = self.i2c.read_byte_data(self.REG_WHO_AM_I)
+        if id != self.WHO_AM_I:
+            raise ValueError(f"QMI8658B ID error, expected 0x{self.WHO_AM_I:02x}, got 0x{id:02x}")
         self.set_mode(self.MODE_ACCEL_GYRO)
         # Enable address auto-increment for burst read/write
         self.set_ctrl1(addr_ai=True)
@@ -256,7 +259,7 @@ class QMI8658B(AccelGyroSensor):
         ''' Reset the device
         '''
         # Reset the device
-        self.i2c.write_byte_data(self.REG_CTRL1, self.SOFTWARE_RESET)
+        self.i2c.write_byte_data(self.REG_RESET, self.SOFTWARE_RESET)
         # Wait for maximum 15ms for the device to be ready
         time.sleep(0.015)
         # Check if the device is ready
@@ -305,7 +308,7 @@ class QMI8658B(AccelGyroSensor):
             self.accel_range = ACCEL_RANGE_MAP[acc_fs]
         if acc_self_test is not None:
             # Assuming Self-Test is in bits 0-1
-            ctrl2 = (ctrl2 & 0b01111111) | ((0x01 if acc_self_test else 0x00) << 7)
+            ctrl2 = (ctrl2 & 0b01111111) | ((0b1 if acc_self_test else 0b0) << 7)
         self.i2c.write_byte_data(self.REG_CTRL2, ctrl2)
 
     def set_ctrl3(self,

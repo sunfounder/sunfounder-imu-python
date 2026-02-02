@@ -44,9 +44,9 @@ class QMC6309(MagSensor):
     ODR_200_HZ = 0b100
 
     OSR1_8 = 0b00
-    OSR2_4 = 0b01
-    OSR4_2 = 0b10
-    OSR8_1 = 0b11
+    OSR1_4 = 0b01
+    OSR1_2 = 0b10
+    OSR1_1 = 0b11
 
     OSR2_1 = 0b000
     OSR2_2 = 0b001
@@ -62,11 +62,11 @@ class QMC6309(MagSensor):
     RANGE_16_GAUSS = 0b01
     RANGE_8_GAUSS  = 0b10
 
-    SELF_TEST_ON  = 0b1 << 6
-    SELF_TEST_OFF = 0b0 << 6
+    SELF_TEST_ON  = 0b1
+    SELF_TEST_OFF = 0b0
 
-    SOFT_RST_ON   = 0b1 << 7
-    SOFT_RST_OFF  = 0b0 << 7
+    SOFT_RST_ON   = 0b1
+    SOFT_RST_OFF  = 0b0
 
     DATA_REGS = [REG_DATA_X, REG_DATA_Y, REG_DATA_Z]
 
@@ -146,7 +146,7 @@ class QMC6309(MagSensor):
             ctrl1 &= ~(0b11 << 0)
             ctrl1 |= mode << 0
         if osr1 is not None:
-            ctrl1 &= ~(0b11 << 3)
+            ctrl1 &= ~(0b111 << 3)
             ctrl1 |= osr1 << 3
         if osr2 is not None:
             ctrl1 &= ~(0b111 << 5)
