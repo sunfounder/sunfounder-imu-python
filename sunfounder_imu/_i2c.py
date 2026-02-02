@@ -101,7 +101,7 @@ class I2C(_Base):
         Returns:
             bool: True if the byte is written successfully, False otherwise
         """
-        self.log.debug(f"write_byte: 0x{data:02x}({data})")
+        self.log.debug(f"w: 0x{self.address:02X}, 0x{data:02X}")
         result = self._smbus.write_byte(self.address, data)
         return result
 
@@ -116,29 +116,22 @@ class I2C(_Base):
         Returns:
             bool: True if the byte is written successfully, False otherwise
         """
-        self.log.debug(f"write_byte_data:\n  address: 0x{self.address:02x}\n      reg: 0x{reg:02x}({reg})\n     data: 0x{data:02x}({data})")
+        self.log.debug(f"w: 0x{self.address:02X}, 0x{reg:02X}, 0x{data:02X}")
         result = self._smbus.write_byte_data(self.address, reg, data)
         return result
 
     @retry(RETRY)
-    def write_word_data(self, reg: int, data: int, lsb: bool = False) -> bool:
+    def write_word_data(self, reg: int, data: int) -> bool:
         """ Write a word to the I2C bus
 
         Args:
             reg (int): register address
             data (int): word to write
-            lsb (bool, optional): True if the word is written in little-endian, False otherwise, default is False
 
         Returns:
             bool: True if the word is written successfully, False otherwise
         """
-        msg = f"write_word_data: 0x{reg:02x}({reg}), 0x{data:04x}({data})"
-        if lsb:
-            l_byte = (data >> 0) & 0xFF
-            h_byte = (data >> 8) & 0xFF
-            data = (l_byte << 8) | h_byte
-            msg += f", LSB={lsb} (sent: 0x{data:04x}({data}))"
-        self.log.debug(msg)
+        self.log.debug(f"w: 0x{self.address:02X}, 0x{reg:02X}, 0x{data:04X}")
         return self._smbus.write_word_data(self.address, reg, data)
 
     @retry(RETRY)
@@ -152,7 +145,8 @@ class I2C(_Base):
         Returns:
             bool: True if the block of data is written successfully, False otherwise
         """
-        self.log.debug(f"write_i2c_block_data: 0x{reg:02x}({reg}), {data}")
+        data_msg = [f"0x{byte:02X}" for byte in data]
+        self.log.debug(f"w: 0x{self.address:02X}, 0x{reg:02X}, {', '.join(data_msg)}")
         result = self._smbus.write_i2c_block_data(self.address, reg, data)
         return result
 
@@ -163,9 +157,9 @@ class I2C(_Base):
         Returns:
             int: byte read from the I2C bus
         """
-        msg = f"read_byte: 0x{self.address:02x}({self.address})"
+        msg = f"r: 0x{self.address:02X}"
         result = self._smbus.read_byte(self.address)
-        msg += f" -> 0x{result:02x}({result})"
+        msg += f", 0x{result:02X}"
         self.log.debug(msg)
         return result
 
@@ -179,31 +173,25 @@ class I2C(_Base):
         Returns:
             int: byte read from the I2C bus
         """
-        msg = f"read_byte_data: 0x{reg:02x}({reg})"
+        msg = f"r: 0x{self.address:02X}, 0x{reg:02X}"
         result = self._smbus.read_byte_data(self.address, reg)
-        msg += f" -> 0x{result:02x}({result})"
+        msg += f", 0x{result:02x}"
         self.log.debug(msg)
         return result
 
     @retry(RETRY)
-    def read_word_data(self, reg: int, lsb: bool = False) -> int:
+    def read_word_data(self, reg: int) -> int:
         """ Read a word from the I2C bus
 
         Args:
             reg (int): register address
-            lsb (bool, optional): True if the word is read in little-endian, False otherwise, default is False
 
         Returns:
             int: word read from the I2C bus
         """
-        msg = f"read_word_data: 0x{reg:02x}({reg})"
+        msg = f"r: 0x{self.address:02X}, 0x{reg:02X}"
         result = self._smbus.read_word_data(self.address, reg)
-        if lsb:
-            l_byte = (result >> 0) & 0xFF
-            h_byte = (result >> 8) & 0xFF
-            result = (l_byte << 8) | h_byte  
-            msg += f", LSB={lsb}"
-        msg += f" -> 0x{result:04x}({result})"
+        msg += f", 0x{result:04X}"
         self.log.debug(msg)
         return result
 
@@ -218,9 +206,9 @@ class I2C(_Base):
         Returns:
             list: block of data read from the I2C bus
         """
-        msg = f"read_i2c_block_data: 0x{reg:02x}, {num} bytes"
+        msg = f"r: 0x{self.address:02X}, 0x{reg:02X}, ({num})"
         result = self._smbus.read_i2c_block_data(self.address, reg, num)
-        msg += f" -> {result}"
+        msg += f", {', '.join([f'0x{byte:02X}' for byte in result])}"
         self.log.debug(msg) 
         return result
 
@@ -231,13 +219,13 @@ class I2C(_Base):
         Returns:
             bool: True if the I2C device is ready, False otherwise
         """
-        self.log.debug(f"Check if 0x{self.address:02x}({self.address}) is ready")
+        self.log.debug(f"Check if 0x{self.address:02X}({self.address}) is ready")
         addresses = self.scan(all=True)
         if self.address in addresses:
-            self.log.debug(f"0x{self.address:02x}({self.address}) is ready")
+            self.log.debug(f"0x{self.address:02X}({self.address}) is ready")
             return True
         else:
-            self.log.debug(f"0x{self.address:02x}({self.address}) is not ready")
+            self.log.debug(f"0x{self.address:02X}({self.address}) is not ready")
             return False
 
     @staticmethod
