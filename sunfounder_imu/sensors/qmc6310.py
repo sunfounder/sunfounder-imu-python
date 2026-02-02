@@ -3,7 +3,7 @@ from typing import Optional
 from .._i2c import I2C
 from .mag_sensor import MagSensor
 from .._utils import twos_complement, mapping
-
+import time
 
 class QMC6310(MagSensor):
     ''' QMC6310 magnetometer
@@ -54,11 +54,11 @@ class QMC6310(MagSensor):
     RANGE_8_GAUSS  = 0b10
     RANGE_2_GAUSS  = 0b11
 
-    SELF_TEST_ON  = 0b1 << 6
-    SELF_TEST_OFF = 0b0 << 6
+    SELF_TEST_ON  = 0b1
+    SELF_TEST_OFF = 0b0
 
-    SOFT_RST_ON   = 0b1 << 7
-    SOFT_RST_OFF  = 0b0 << 7
+    SOFT_RST_ON   = 0b1
+    SOFT_RST_OFF  = 0b0
 
     DATA_REGS = [REG_DATA_X, REG_DATA_Y, REG_DATA_Z]
 
@@ -80,41 +80,12 @@ class QMC6310(MagSensor):
         self.i2c = I2C(address=address)
         self.range = None
 
-        self.init(
-            set_reset_mode=self.SET_RESET_ON,
-            mode=self.MODE_NORMAL,
-            odr=self.ODR_200_HZ,
-            osr1=self.OSR1_8,
-            osr2=self.OSR2_8,
-            range=self.RANGE_8_GAUSS,
-        )
-    
-    def init(self,
-        set_reset_mode: Optional[int]=None,
-        mode: Optional[int]=None,
-        odr: Optional[int]=None,
-        osr1: Optional[int]=None,
-        osr2: Optional[int]=None,
-        range: Optional[int]=None,
-        ) -> None:
-        ''' Initialize the device.
-
-        Args:
-            set_reset_mode (int, optional): Set reset mode. Defaults to SET_RESET_ON.
-            mode (int, optional): Operation mode. Defaults to MODE_NORMAL.
-            odr (int, optional): Output data rate. Defaults to ODR_200_HZ.
-            osr1 (int, optional): OSR1. Defaults to OSR1_8.
-            osr2 (int, optional): OSR2. Defaults to OSR2_8.
-            range (int, optional): Range. Defaults to RANGE_30_GAUSS.
-        '''
-        
-        self.range = self.RANGES[range]
         # Define the sign for X Y and Z axis ( Don't know why, and how, but datasheet says so in Normal Mode Setup Example)
         self.set_sign(True, True, False)
         # Reset
         self.reset()
-        self.set_ctrl2(set_reset_mode=set_reset_mode, range=range, self_test=self.SELF_TEST_OFF)
-        self.set_ctrl1(mode=mode, odr=odr, osr1=osr1, osr2=osr2)
+        self.set_ctrl2(set_reset_mode=self.SET_RESET_ON, range=self.RANGE_8_GAUSS, self_test=self.SELF_TEST_OFF)
+        self.set_ctrl1(mode=self.MODE_NORMAL, odr=self.ODR_200_HZ, osr1=self.OSR1_8, osr2=self.OSR2_8)
 
     def set_sign(self, x: bool, y: bool, z: bool) -> None:
         ''' Set the magnetometer sign.
@@ -130,7 +101,9 @@ class QMC6310(MagSensor):
     def reset(self) -> None:
         ''' Reset the device.
         '''
-        self.i2c.write_byte_data(self.REG_CTL_2, self.SOFT_RST_ON)
+        self.i2c.write_byte_data(self.REG_CTL_2, self.SOFT_RST_ON << 7)
+        time.sleep(0.1)
+        self.i2c.write_byte_data(self.REG_CTL_2, self.SOFT_RST_OFF << 7)
 
     def set_ctrl1(self, mode: Optional[int]=None, odr: Optional[int]=None, osr1: Optional[int]=None, osr2: Optional[int]=None) -> None:
         ''' Set the control register 1.
@@ -156,12 +129,13 @@ class QMC6310(MagSensor):
             ctrl1 |= osr2 << 6
         self.i2c.write_byte_data(self.REG_CTL_1, ctrl1)
 
-    def set_ctrl2(self, set_reset_mode: Optional[int]=None, range: Optional[int]=None) -> None:
+    def set_ctrl2(self, set_reset_mode: Optional[int]=None, range: Optional[int]=None, self_test: Optional[int]=None) -> None:
         ''' Set the control register 2.
 
         Args:
             set_reset_mode (int, optional): Set reset mode. Defaults to None.
             range (int, optional): Magnetometer range. Defaults to None.
+            self_test (int, optional): Self test mode. Defaults to None.
         '''
         ctrl2 = self.i2c.read_byte_data(self.REG_CTL_2)
         if set_reset_mode is not None:
@@ -171,12 +145,15 @@ class QMC6310(MagSensor):
             ctrl2 &= ~(0b11 << 2)
             ctrl2 |= range << 2
             self.range = self.RANGES[range]
+        if self_test is not None:
+            ctrl2 &= ~(0b1 << 6)
+            ctrl2 |= self_test << 6
         self.i2c.write_byte_data(self.REG_CTL_2, ctrl2)
 
     def self_test(self) -> None:
         ''' Set self test mode.
         '''
-        self.i2c.write_byte_data(self.REG_CTL_2, self.SELF_TEST_ON)
+        self.i2c.write_byte_data(self.REG_CTL_2, self.SELF_TEST_ON << 6)
 
     def set_range(self, range: int) -> None:
         ''' Set the magnetometer range.
