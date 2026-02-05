@@ -108,26 +108,33 @@ class QMI8658B(AccelGyroSensor):
 
     # Accelerometer Output Data Rate (ODR) options
     # Normal
-    ACC_ODR_8000HZ  = 0b0000
-    ACC_ODR_4000HZ  = 0b0001
-    ACC_ODR_2000HZ  = 0b0010
-    ACC_ODR_1000HZ  = 0b0011
-    ACC_ODR_500HZ   = 0b0100
-    ACC_ODR_250HZ   = 0b0101
-    ACC_ODR_125HZ   = 0b0110
-    ACC_ODR_62_5HZ  = 0b0111
+    ACC_ODR_7174_4HZ = 0b0000
+    ACC_ODR_3587_2HZ = 0b0001
+    ACC_ODR_1793_6HZ = 0b0010
+    ACC_ODR_896_8HZ = 0b0011
+    ACC_ODR_448_4HZ = 0b0100
+    ACC_ODR_224_2HZ = 0b0101
+    ACC_ODR_112_1HZ = 0b0110
+    ACC_ODR_56_05HZ = 0b0111
+    ACC_ODR_28_025HZ = 0b1000
+    # Accel only
+    ACC_ODR_1000HZ = 0b0011
+    ACC_ODR_500HZ = 0b0100
+    ACC_ODR_250HZ = 0b0101
+    ACC_ODR_125HZ = 0b0110
+    ACC_ODR_62_5HZ = 0b0111
     ACC_ODR_31_25HZ = 0b1000
-    # Accelerometer Full Scale options
-    ACCEL_RANGE_2G = 0b00   # ±2g
-    ACCEL_RANGE_4G = 0b01   # ±4g
-    ACCEL_RANGE_8G = 0b10   # ±8g
-    ACCEL_RANGE_16G = 0b11  # ±16g
-
     # Low Power
     ACC_ODR_128HZ   = 0b1100
     ACC_ODR_21HZ    = 0b1101
     ACC_ODR_11HZ    = 0b1110
     ACC_ODR_3HZ     = 0b1111
+
+    # Accelerometer Full Scale options
+    ACCEL_RANGE_2G = 0b00   # ±2g
+    ACCEL_RANGE_4G = 0b01   # ±4g
+    ACCEL_RANGE_8G = 0b10   # ±8g
+    ACCEL_RANGE_16G = 0b11  # ±16g
 
     # Gyroscope Output Data Rate (ODR) options
     GYRO_ODR_7174_4HZ = 0b0000  # 7174.4 Hz, Normal, 100%
@@ -216,16 +223,22 @@ class QMI8658B(AccelGyroSensor):
 
         super().__init__(address, *args, **kwargs)
 
-        self.accel_range = self.ACCEL_RANGES[self.ACCEL_RANGE_2G]
-        self.gyro_range = self.GYRO_RANGES[self.GYRO_RANGE_16DPS]
+        self.accel_range = None
+        self.gyro_range = None
         self.i2c = I2C(address=address)
 
         id = self.i2c.read_byte_data(self.REG_WHO_AM_I)
         if id != self.WHO_AM_I:
             raise ValueError(f"QMI8658B ID error, expected 0x{self.WHO_AM_I:02x}, got 0x{id:02x}")
-        self.set_mode(self.MODE_ACCEL_GYRO)
+
+        self.set_ctrl7(gyro_snooze=False, accel_en=True, gyro_en=True)
+        time.sleep(0.015)
         # Enable address auto-increment for burst read/write
         self.set_ctrl1(addr_ai=True)
+        # High ODR (>1793.6Hz) causes significant data jitter
+        # due to I2C bottleneck and register tearing
+        self.set_ctrl2(acc_range=self.ACCEL_RANGE_4G, acc_odr=self.ACC_ODR_1793_6HZ)
+        self.set_ctrl3(gyro_fs=self.GYRO_RANGE_512DPS, gyro_odr=self.GYRO_ODR_1793_6HZ)
 
     def set_mode(self, mode: int):
         ''' Set mode
@@ -294,9 +307,9 @@ class QMI8658B(AccelGyroSensor):
         self.i2c.write_byte_data(self.REG_CTRL1, ctrl1)
 
     def set_ctrl2(self,
-            acc_odr: Optional[int]=None, # Accelerometer Output DataRate, default 0 (8000Hz)
-            acc_fs: Optional[int]=None, # Accelerometer Full Scale, default 0 (±2g)
             acc_self_test: Optional[bool]=None, # Accelerometer Self-Test, default False (disabled)
+            acc_fs: Optional[int]=None, # Accelerometer Full Scale, default 0 (±2g)
+            acc_odr: Optional[int]=None, # Accelerometer Output DataRate, default 0 (8000Hz)
         ):
         ctrl2 = self.i2c.read_byte_data(self.REG_CTRL2)
         if acc_odr is not None:
